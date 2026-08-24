@@ -1,0 +1,2759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta property="og:title" content="妙彩幻想曲 · 鹊桥星光">
+<meta property="og:description" content="羊了个羊风格消除小游戏，20 关难度递增，手机随时玩">
+<meta property="og:type" content="website">
+<title>妙彩幻想曲 · 鹊桥星光</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; user-select: none; -webkit-user-select: none; }
+  body {
+    background:
+      radial-gradient(ellipse at 50% 35%, #1d4d8a 0%, #0e2d5c 55%, #061536 100%);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    position: relative;
+  }
+  /* 背景波纹 */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(circle at 18% 22%, rgba(80,150,220,0.18) 0%, transparent 40%),
+      radial-gradient(circle at 82% 18%, rgba(80,150,220,0.15) 0%, transparent 40%),
+      radial-gradient(circle at 30% 78%, rgba(80,150,220,0.12) 0%, transparent 35%),
+      radial-gradient(circle at 75% 82%, rgba(80,150,220,0.12) 0%, transparent 35%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #app { position: relative; z-index: 1; width: 100%; max-width: 560px; height: 100vh; height: 100dvh; display: flex; flex-direction: column; padding: 10px 8px 14px; }
+
+  /* ====== 整页等比缩放容器 (移动端按屏幕宽度缩放) ====== */
+  #gamePage { display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+  #levelStartPage { overflow: hidden; }
+  .page-inner {
+    width: 540px;
+    flex-shrink: 0;
+    transform-origin: top center;
+    transform: scale(var(--ps, 1));
+  }
+
+  /* ====== 顶部云朵条 ====== */
+  .cloud-header {
+    position: relative;
+    margin: 6px auto 0;
+    padding: 8px 36px;
+    background: linear-gradient(180deg, #ffffff 0%, #e9f0fb 100%);
+    border-radius: 28px;
+    box-shadow:
+      0 4px 12px rgba(0,20,80,0.4),
+      inset 0 -3px 0 rgba(80,120,180,0.18),
+      inset 0 2px 0 rgba(255,255,255,0.9);
+    color: #2a4d8c;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cloud-header::before, .cloud-header::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #ffffff, #d8e2f0);
+    box-shadow: 0 2px 4px rgba(0,20,80,0.3), inset 0 -2px 0 rgba(80,120,180,0.2);
+  }
+  .cloud-header::before { left: -6px; }
+  .cloud-header::after { right: -6px; }
+  .cloud-header .x { color: #1a3a6e; font-size: 22px; }
+
+  /* ====== 居中立体大字 ====== */
+  .level-big {
+    margin: 2px auto 0;
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1;
+    color: #ffffff;
+    text-align: center;
+    text-shadow:
+      0 0 0 #000,
+      -1px 0 0 #000, 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000,
+      -2px 0 0 #061a40, 2px 0 0 #061a40, 0 -2px 0 #061a40, 0 2px 0 #061a40,
+      -3px 0 0 #1f5fb0, 3px 0 0 #1f5fb0, 0 -3px 0 #1f5fb0, 0 3px 0 #1f5fb0,
+      0 4px 0 #0e3a85, 0 6px 12px rgba(0,0,0,0.5);
+    letter-spacing: 3px;
+  }
+
+  /* ====== 棋盘 ====== */
+  #board {
+    position: relative;
+    margin: 8px auto 6px;
+    width: 540px;
+    max-width: 100%;
+    height: 320px;
+  }
+
+  /* ====== 顶部左右堆叠 (flex 布局, 始终在 board 上方) ====== */
+  .top-piles {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 540px;
+    max-width: 100%;
+    margin: 0 auto 4px;
+    padding: 4px 4px 6px;
+    min-height: 64px;
+    box-sizing: border-box;
+  }
+  .top-pile {
+    position: relative;
+    width: 88px;
+    height: 76px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .top-pile.left  { margin-left: 0; }
+  .top-pile.right { margin-right: 0; }
+  .top-pile-card {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #e6eef8 100%);
+    box-shadow:
+      0 3px 0 rgba(20,40,90,0.35),
+      0 4px 10px rgba(0,0,0,0.4),
+      inset 0 2px 0 rgba(255,255,255,0.95),
+      inset 0 -3px 0 rgba(120,150,200,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, filter 0.15s, opacity 0.3s;
+  }
+  .top-pile-card:hover { transform: scale(1.06); filter: brightness(1.08); }
+  .top-pile-card:active { transform: scale(0.95); }
+  .top-pile-card svg { width: 42px; height: 42px; pointer-events: none; }
+  .top-pile-card.gone { opacity: 0; transform: scale(0.3); pointer-events: none; }
+  .tile {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #e6eef8 100%);
+    box-shadow:
+      0 3px 0 rgba(20,40,90,0.35),
+      0 4px 10px rgba(0,0,0,0.4),
+      inset 0 2px 0 rgba(255,255,255,0.95),
+      inset 0 -3px 0 rgba(120,150,200,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: filter 0.15s, box-shadow 0.15s;
+    will-change: transform, opacity;
+  }
+  .tile:hover { filter: brightness(1.08); }
+  .tile.blocked { cursor: not-allowed; filter: brightness(0.7) saturate(0.4); }
+  .tile.blocked:hover { filter: brightness(0.7) saturate(0.4); }
+  .tile svg { width: 50px; height: 50px; pointer-events: none; }
+
+  /* ====== 棋盘下的"提示"先清除区域 ====== */
+  .hint-box {
+    position: absolute;
+    border: 2px dashed #ff8a30;
+    border-radius: 8px;
+    background: rgba(255,138,48,0.06);
+    pointer-events: none;
+    z-index: 999;
+    display: none;
+  }
+  .hint-label {
+    position: absolute;
+    background: #fff;
+    color: #ff6020;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    pointer-events: none;
+    display: none;
+  }
+
+  /* ====== 临时存放区 (上一排) ====== */
+  .section-label {
+    text-align: center;
+    color: #a8c8e8;
+    font-size: 11px;
+    letter-spacing: 2px;
+    margin: 1px 0;
+    opacity: 0.85;
+  }
+  #stash, #tray {
+    margin: 0 auto;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+  }
+  .slot {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1.5px dashed rgba(180,210,240,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .slot.filled {
+    background: linear-gradient(180deg, #ffffff 0%, #e6eef8 100%);
+    border: none;
+    box-shadow:
+      0 3px 0 rgba(20,40,90,0.35),
+      0 4px 10px rgba(0,0,0,0.4),
+      inset 0 2px 0 rgba(255,255,255,0.95),
+      inset 0 -3px 0 rgba(120,150,200,0.35);
+    animation: slotIn 0.25s ease-out;
+    cursor: pointer;
+  }
+  @keyframes slotIn {
+    0% { transform: scale(0.4); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* ====== 消除消散特效 ====== */
+  #fxLayer {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .fx-burst {
+    position: absolute;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: fxBurst 0.5s ease-out forwards;
+  }
+  @keyframes fxBurst {
+    0% { width: 10px; height: 10px; opacity: 0.9; box-shadow: 0 0 0 0 rgba(255,255,255,0.9); }
+    60% { opacity: 0.7; box-shadow: 0 0 24px 18px rgba(180,220,255,0); }
+    100% { width: 150px; height: 150px; opacity: 0; box-shadow: 0 0 40px 30px rgba(180,220,255,0); }
+  }
+  .fx-shard {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    animation: fxShard 0.62s cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
+    will-change: transform, opacity;
+  }
+  @keyframes fxShard {
+    0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2) rotate(var(--rot)); opacity: 0; }
+  }
+  .fx-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.85);
+    transform: translate(-50%, -50%);
+    animation: fxRing 0.55s ease-out forwards;
+  }
+  @keyframes fxRing {
+    0% { width: 6px; height: 6px; opacity: 0.95; border-width: 4px; }
+    100% { width: 120px; height: 120px; opacity: 0; border-width: 1px; }
+  }
+  .fx-score {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 20px;
+    font-weight: 900;
+    text-shadow: 0 2px 6px rgba(0,60,140,0.9);
+    animation: fxScore 0.8s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes fxScore {
+    0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+    30% { transform: translate(-50%, -90%) scale(1.1); opacity: 1; }
+    100% { transform: translate(-50%, -160%) scale(1); opacity: 0; }
+  }
+  .slot.filled.stash-slot { cursor: pointer; }
+  .slot.filled.stash-slot:hover { filter: brightness(1.1); }
+  .slot svg { width: 50px; height: 50px; pointer-events: none; }
+  /* 新进槽位闪烁高亮（"刚进了这格"反馈）*/
+  .slot.flash { animation: slotFlash 380ms ease-out; }
+  @keyframes slotFlash {
+    0%   { box-shadow: 0 0 0 0 rgba(120,200,255,0.9), 0 3px 0 rgba(20,40,90,0.35); transform: scale(1.0); }
+    35%  { box-shadow: 0 0 0 8px rgba(120,200,255,0.45), 0 3px 0 rgba(20,40,90,0.35); transform: scale(1.10); }
+    100% { box-shadow: 0 3px 0 rgba(20,40,90,0.35), 0 4px 10px rgba(0,0,0,0.4); transform: scale(1.0); }
+  }
+
+  /* 三消预备动画：被消除的 3 张先在槽里黄闪+放大，再缩散消失（玩家必须能清楚看到"消除即将发生"） */
+  .slot.eliminating {
+    animation: slotEliminate 0.5s cubic-bezier(0.4, 0, 0.4, 1) forwards;
+    pointer-events: none;
+  }
+  @keyframes slotEliminate {
+    0%   { transform: scale(1.0)  rotate(0deg);  background: linear-gradient(180deg, #ffffff 0%, #e6eef8 100%); filter: brightness(1.0);  opacity: 1; }
+    18%  { transform: scale(1.28) rotate(3deg);  background: linear-gradient(180deg, #fff8d0 0%, #ffd633 100%); filter: brightness(1.6); opacity: 1; box-shadow: 0 0 22px 6px rgba(255,210,90,0.85); }
+    55%  { transform: scale(1.05) rotate(-2deg); background: linear-gradient(180deg, #fff8d0 0%, #ffd633 100%); filter: brightness(1.8); opacity: 1; box-shadow: 0 0 30px 10px rgba(255,210,90,0.5); }
+    100% { transform: scale(0.05) rotate(20deg); filter: brightness(2.2); opacity: 0; }
+  }
+  /* 飞行中目标槽位的呼吸提示，告诉玩家"这张要去这里" */
+  .slot.pending {
+    background: linear-gradient(180deg, rgba(120,200,255,0.06), rgba(120,200,255,0.02));
+    border: 1.5px dashed rgba(120,200,255,0.5);
+    animation: slotPending 0.4s ease-in-out infinite;
+  }
+  @keyframes slotPending {
+    0%, 100% { box-shadow: inset 0 0 0 1px rgba(120,200,255,0.35); transform: scale(1.0); }
+    50%      { box-shadow: inset 0 0 0 2px rgba(120,200,255,0.9);  transform: scale(1.05); }
+  }
+  /* 三消中心大字"+10" */
+  .fx-match-text {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 26px;
+    font-weight: 900;
+    text-shadow: 0 2px 0 #b07800, 0 0 12px rgba(255,210,90,0.9), 0 4px 8px rgba(0,0,0,0.5);
+    letter-spacing: 2px;
+    animation: fxMatchText 0.9s ease-out forwards;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  @keyframes fxMatchText {
+    0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+    20%  { transform: translate(-50%, -90%) scale(1.2); opacity: 1; }
+    100% { transform: translate(-50%, -200%) scale(1.0); opacity: 0; }
+  }
+
+  /* ====== 返回选关按钮 ====== */
+  .home-btn {
+    flex-shrink: 0;
+    width: 60px;
+    height: 34px;
+    border-radius: 17px;
+    background: linear-gradient(180deg, #5fa6f0 0%, #2a6dc4 60%, #1a4d9a 100%);
+    box-shadow:
+      0 2px 0 rgba(10,30,80,0.6),
+      0 3px 8px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.5);
+    border: 1.5px solid #fff;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .home-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(10,30,80,0.6), 0 2px 4px rgba(0,0,0,0.4); }
+
+  /* ====== 道具栏 ====== */
+  #props {
+    margin: 8px auto 0;
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+  }
+  .prop-btn {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #5fa6f0 0%, #2a6dc4 60%, #1a4d9a 100%);
+    box-shadow:
+      0 3px 0 rgba(10,30,80,0.6),
+      0 5px 12px rgba(0,0,0,0.4),
+      inset 0 2px 0 rgba(255,255,255,0.5),
+      inset 0 -3px 0 rgba(20,60,120,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    color: #fff;
+    transition: filter 0.15s, transform 0.1s;
+  }
+  .prop-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(10,30,80,0.6), 0 2px 4px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.4); }
+  .prop-btn:disabled { filter: grayscale(0.7) brightness(0.7); cursor: not-allowed; }
+  .prop-btn .badge {
+    position: absolute;
+    top: -6px; right: -6px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 4px;
+    background: linear-gradient(180deg, #ff6a3a, #d83a1a);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+    border: 1.5px solid #fff;
+  }
+  .prop-btn svg { width: 40px; height: 40px; pointer-events: none; }
+
+  /* ====== 关卡开始页 ====== */
+  #levelStartPage {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 18px;
+  }
+  #levelStartPage.hidden { display: none; }
+  .start-title {
+    margin-top: 8px;
+    font-size: 28px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow:
+      0 2px 0 #1a3a6e, 0 4px 8px rgba(0,0,0,0.5),
+      0 0 12px rgba(120,180,255,0.4);
+    letter-spacing: 4px;
+  }
+  .start-preview {
+    margin: 10px 0 6px;
+    width: 360px;
+    max-width: 88%;
+    height: 280px;
+    position: relative;
+  }
+  .start-preview .tile { transform: scale(0.6); transform-origin: top left; }
+  .preview-mini {
+    position: absolute;
+    top: -16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #ffffff 0%, #e6eef8 100%);
+    box-shadow: 0 2px 0 rgba(20,40,90,0.35), 0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -2px 0 rgba(120,150,200,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .preview-mini svg { width: 26px; height: 26px; }
+  .preview-mini.left  { left: -8px; }
+  .preview-mini.right { right: -8px; }
+  /* ====== 开始按钮 ====== */
+  .start-btn {
+    margin: 4px auto 0;
+    width: 240px;
+    height: 56px;
+    border-radius: 28px;
+    background: linear-gradient(180deg, #5fa6f0 0%, #2a6dc4 50%, #1a4d9a 100%);
+    box-shadow:
+      0 4px 0 rgba(10,30,80,0.6),
+      0 6px 14px rgba(0,0,0,0.5),
+      inset 0 3px 0 rgba(255,255,255,0.4),
+      inset 0 -4px 0 rgba(20,60,120,0.4);
+    border: 2px solid #fff;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .start-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(10,30,80,0.6), 0 3px 8px rgba(0,0,0,0.4); }
+
+  /* ====== 首屏底部填充区 (消除底部空白, 美化整体视觉) ====== */
+  .start-footer {
+    margin: 18px auto 6px;
+    width: 100%;
+    max-width: 440px;
+    text-align: center;
+    color: rgba(255,255,255,0.55);
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+  .start-footer .hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px dashed rgba(255,255,255,0.18);
+    border-radius: 16px;
+    margin-bottom: 8px;
+  }
+  .start-footer .hint span.dot {
+    width: 6px; height: 6px;
+    background: #6ec1ff;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 6px #6ec1ff;
+  }
+  .start-footer .bubbles {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 14px;
+    margin-top: 8px;
+    opacity: 0.35;
+  }
+  .start-footer .bubbles span {
+    display: block;
+    background: radial-gradient(circle at 30% 30%, #b5d9ff, #4a87d4);
+    border-radius: 50%;
+    box-shadow: inset -2px -2px 0 rgba(0,0,0,0.18);
+  }
+  .start-footer .b1 { width: 38px; height: 38px; }
+  .start-footer .b2 { width: 24px; height: 24px; }
+  .start-footer .b3 { width: 52px; height: 52px; }
+  .start-footer .b4 { width: 18px; height: 18px; }
+  .start-footer .b5 { width: 30px; height: 30px; }
+  .start-footer .copy {
+    margin-top: 4px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    opacity: 0.7;
+  }
+  .start-props {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+  }
+  .start-props .prop-btn { width: 60px; height: 60px; }
+  .start-props .prop-btn svg { width: 32px; height: 32px; }
+
+  /* ====== 关卡选择网格 ====== */
+  .level-select-title {
+    margin: 14px 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-shadow: 0 2px 0 #1a3a6e, 0 0 10px rgba(120,180,255,0.4);
+  }
+  .level-select-title .ls-line {
+    width: 40px;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, #9fd0ff, transparent);
+  }
+  .level-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 9px;
+    width: 320px;
+    max-width: 90%;
+    margin: 0 auto 6px;
+    max-height: 188px;
+    overflow-y: auto;
+    padding: 4px;
+  }
+  .level-grid::-webkit-scrollbar { width: 6px; }
+  .level-grid::-webkit-scrollbar-thumb { background: rgba(160,200,255,0.5); border-radius: 3px; }
+  .lv-cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #6fb0f4 0%, #2a6dc4 70%, #1a4d9a 100%);
+    border: 2px solid rgba(255,255,255,0.85);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 3px 0 rgba(10,30,80,0.55), 0 4px 10px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.4);
+    transition: transform 0.12s, filter 0.12s;
+    user-select: none;
+  }
+  .lv-cell:hover { transform: translateY(-2px); filter: brightness(1.12); }
+  .lv-cell:active { transform: translateY(1px); }
+  .lv-cell.current {
+    background: linear-gradient(180deg, #ffd96a 0%, #f0a020 60%, #c86010 100%);
+    border-color: #fff;
+    color: #5a2a00;
+    box-shadow: 0 3px 0 rgba(120,60,0,0.6), 0 0 14px rgba(255,210,90,0.7), inset 0 2px 0 rgba(255,255,255,0.6);
+  }
+  .lv-cell.cleared {
+    background: linear-gradient(180deg, #7ee0a8 0%, #2faa6a 65%, #1a7a48 100%);
+    border-color: rgba(255,255,255,0.85);
+  }
+  .lv-cell.cleared::after {
+    content: '✓';
+    position: absolute;
+    top: -6px; right: -6px;
+    width: 18px; height: 18px;
+    background: #fff;
+    color: #1a7a48;
+    font-size: 12px;
+    font-weight: 900;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .lv-cell.locked {
+    filter: grayscale(0.8) brightness(0.65);
+    cursor: not-allowed;
+    border-color: rgba(255,255,255,0.3);
+  }
+  .lv-cell.locked::before {
+    content: '🔒';
+    position: absolute;
+    font-size: 13px;
+    filter: grayscale(1) brightness(1.4);
+  }
+  .lv-cell.locked > span { visibility: hidden; }
+  .reset-row { margin: 2px 0 4px; }
+  .reset-btn {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #dbe8ff;
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .reset-btn:active { transform: translateY(1px); }
+
+  /* ====== 弹窗 ====== */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0,10,40,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .modal.show { display: flex; }
+  .modal .box {
+    background: linear-gradient(180deg, #ffffff 0%, #e6eef8 100%);
+    color: #1a3a6e;
+    border-radius: 18px;
+    padding: 24px 32px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    text-align: center;
+    min-width: 240px;
+  }
+  .modal .box h2 { font-size: 24px; margin-bottom: 8px; }
+  .modal .box p { font-size: 14px; color: #4a6090; margin-bottom: 12px; }
+  .modal-btn {
+    background: linear-gradient(180deg, #5fa6f0 0%, #2a6dc4 100%);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 24px;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 4px;
+    cursor: pointer;
+    box-shadow: 0 3px 0 rgba(10,30,80,0.4);
+  }
+  .modal-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(10,30,80,0.4); }
+  .modal-btn.gray { background: linear-gradient(180deg, #b8c4d8, #8090a8); }
+
+  /* ====== 声音控制组 (音乐 / 音效 独立开关) ====== */
+  .sound-group {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    z-index: 50;
+    display: flex;
+    gap: 8px;
+  }
+  .sound-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, rgba(95,166,240,0.85) 0%, rgba(26,77,154,0.85) 100%);
+    border: 1.5px solid rgba(255,255,255,0.8);
+    box-shadow: 0 2px 0 rgba(10,30,80,0.5), 0 3px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.1s, filter 0.15s;
+    position: relative;
+  }
+  .sound-btn:active { transform: translateY(2px); }
+  .sound-btn svg { width: 22px; height: 22px; pointer-events: none; }
+  .sound-btn .lbl {
+    position: absolute;
+    bottom: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .sound-btn.off { filter: grayscale(0.7) brightness(0.72); }
+  .sound-btn.off::after {
+    content: '';
+    position: absolute;
+    width: 28px; height: 2px;
+    background: #ff6a5a;
+    transform: rotate(-45deg);
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 声音控制组: 音乐 / 音效 独立开关 -->
+  <div class="sound-group">
+    <button class="sound-btn" id="bgmBtn" aria-label="背景音乐开关"><span class="lbl">音乐</span></button>
+    <button class="sound-btn" id="sfxBtn" aria-label="音效开关"><span class="lbl">音效</span></button>
+  </div>
+
+  <!-- 关卡开始页 -->
+  <div id="levelStartPage">
+   <div class="page-inner">
+    <div class="cloud-header" style="margin-top:14px;">
+      <span class="x">第</span><span id="startLevelNum">1</span><span class="x">关</span>
+    </div>
+    <div class="start-title" id="startLevelTitle">妙彩幻想曲</div>
+    <div class="start-preview" id="startPreview"></div>
+    <div class="start-props" id="startProps"></div>
+    <div class="level-select-title">
+      <span class="ls-line"></span>
+      <span>选择关卡</span>
+      <span class="ls-line"></span>
+    </div>
+    <div class="level-grid" id="levelGrid"></div>
+    <div class="reset-row">
+      <button class="reset-btn" id="resetProgressBtn">重置进度</button>
+    </div>
+    <button class="start-btn" id="startBtn">开始挑战</button>
+    <div class="start-footer">
+      <div class="hint"><span class="dot"></span>点击下方未被压住的图标加入消除区，集齐三个相同即可消除<span class="dot"></span></div>
+      <div class="bubbles">
+        <span class="b2"></span>
+        <span class="b4"></span>
+        <span class="b3"></span>
+        <span class="b1"></span>
+        <span class="b5"></span>
+        <span class="b2"></span>
+      </div>
+      <div class="copy">© 妙彩幻想曲 · WeChat Friendly</div>
+    </div>
+   </div>
+  </div>
+
+  <!-- 游戏页 -->
+  <div id="gamePage" style="display:none;">
+   <div class="page-inner">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:0 6px;">
+      <button class="home-btn" id="homeBtn">≡ 选关</button>
+      <span class="cloud-header">
+        <span class="x">第</span><span id="curLevelNum">1</span><span class="x">关</span>
+      </span>
+      <span style="width:60px;"></span>
+    </div>
+    <div class="level-big" id="curLevelBig">1<span style="font-size:32px;letter-spacing:0;">关</span></div>
+
+    <div class="top-piles">
+      <div class="top-pile" id="topLeftPile"></div>
+      <div class="top-pile" id="topRightPile"></div>
+    </div>
+    <div id="board"></div>
+    <div class="hint-box" id="hintBox"></div>
+    <div class="hint-label" id="hintLabel">先清除区域</div>
+
+    <div class="section-label">— 临时存放 (移出区) —</div>
+    <div id="stash"></div>
+
+    <div class="section-label">— 消除区 (7格) —</div>
+    <div id="tray"></div>
+
+    <div id="props"></div>
+   </div>
+  </div>
+
+  <!-- 特效层 -->
+  <div id="fxLayer"></div>
+
+  <!-- 弹窗 -->
+  <div class="modal" id="modal">
+    <div class="box">
+      <h2 id="modalTitle">提示</h2>
+      <p id="modalText">内容</p>
+      <div>
+        <button class="modal-btn" id="modalPrimary">确定</button>
+        <button class="modal-btn gray" id="modalSecondary" style="display:none;">取消</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+// ============================================================
+// 音频引擎 (Web Audio API 合成, 无外部资源)
+//   - BGM: 轻柔钢琴风循环旋律
+//   - 音效: 点击 / 消除 / 胜利 / 失败 (即时合成)
+//   - 首次用户交互后启动 (浏览器自动播放策略)
+//   - 静音按钮切换
+// ============================================================
+const AudioEngine = (function () {
+  let ctx = null;
+  let masterGain = null;
+  let bgmGain = null;
+  let sfxGain = null;
+  let bgmOn = true;   // 背景音乐开关
+  let sfxOn = true;   // 音效开关
+  let started = false;
+  let bgmTimer = null;
+  let bgmStep = 0;
+
+  function ensureCtx() {
+    if (ctx) return ctx;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    ctx = new AC();
+    masterGain = ctx.createGain();
+    masterGain.gain.value = 0.9;
+    masterGain.connect(ctx.destination);
+
+    bgmGain = ctx.createGain();
+    bgmGain.gain.value = bgmOn ? 0.45 : 0;   // BGM 音量 (由开关控制)
+    bgmGain.connect(masterGain);
+
+    sfxGain = ctx.createGain();
+    sfxGain.gain.value = sfxOn ? 0.75 : 0;   // SFX 音量 (由开关控制)
+    sfxGain.connect(masterGain);
+    return ctx;
+  }
+
+  // 单个音符 (振荡器 + 包络)
+  function tone(freq, start, dur, type, gainNode, vol, attack, release) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, start);
+    const a = attack || 0.01;
+    const r = release || 0.12;
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(vol, start + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur + r);
+    o.connect(g);
+    g.connect(gainNode || sfxGain);
+    o.start(start);
+    o.stop(start + dur + r + 0.02);
+  }
+
+  // ===== BGM: C 大调循环 (每拍一个音, 约 0.4s 间隔, 旋律+低音两层) =====
+  const BGM_NOTES = [
+    523.25, 659.25, 783.99, 659.25,   // C5 E5 G5 E5
+    587.33, 698.46, 880.00, 698.46,   // D5 F5 A5 F5
+    523.25, 659.25, 783.99, 1046.50,  // C5 E5 G5 C6
+    880.00, 698.46, 587.33, 523.25,   // A5 F5 D5 C5
+  ];
+  const BGM_BEAT = 0.40;
+  function playBgmStep() {
+    if (!ctx || !bgmOn) return;
+    const t = ctx.currentTime + 0.02;
+    const f = BGM_NOTES[bgmStep % BGM_NOTES.length];
+    // 主旋律 (三角波, 明亮)
+    tone(f, t, BGM_BEAT * 0.85, 'triangle', bgmGain, 0.55, 0.015, 0.18);
+    // 低八度铺底 (正弦, 圆润)
+    tone(f / 2, t, BGM_BEAT * 0.85, 'sine', bgmGain, 0.40, 0.015, 0.22);
+    bgmStep++;
+  }
+  function startBgm() {
+    if (!ctx || bgmTimer || !bgmOn) return;
+    playBgmStep();
+    bgmTimer = setInterval(playBgmStep, BGM_BEAT * 1000);
+  }
+  function stopBgm() {
+    if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
+  }
+
+  // ===== 音效 =====
+  function sfxClick() {
+    if (!ctx || !sfxOn) return;
+    const t = ctx.currentTime + 0.005;
+    tone(880, t, 0.06, 'square', sfxGain, 0.22, 0.005, 0.05);
+    tone(1320, t + 0.01, 0.04, 'sine', sfxGain, 0.15, 0.005, 0.04);
+  }
+  function sfxMatch() {
+    if (!ctx || !sfxOn) return;
+    const t = ctx.currentTime + 0.005;
+    // 上行三连音 (清脆消除)
+    tone(659.25, t, 0.09, 'triangle', sfxGain, 0.4, 0.005, 0.08);
+    tone(880, t + 0.07, 0.09, 'triangle', sfxGain, 0.4, 0.005, 0.08);
+    tone(1046.5, t + 0.14, 0.12, 'triangle', sfxGain, 0.45, 0.005, 0.12);
+  }
+  function sfxWin() {
+    if (!ctx || !sfxOn) return;
+    const t = ctx.currentTime + 0.01;
+    const seq = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+    seq.forEach((f, i) => tone(f, t + i * 0.12, 0.18, 'triangle', sfxGain, 0.5, 0.01, 0.15));
+  }
+  function sfxLose() {
+    if (!ctx || !sfxOn) return;
+    const t = ctx.currentTime + 0.01;
+    const seq = [440, 392, 349.23, 293.66];
+    seq.forEach((f, i) => tone(f, t + i * 0.16, 0.22, 'sawtooth', sfxGain, 0.35, 0.01, 0.18));
+  }
+
+  // ===== 启动 (首次交互) =====
+  function start() {
+    if (started) {
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      return;
+    }
+    if (!ensureCtx()) {
+      console.warn('[Audio] AudioContext unavailable');
+      started = true; // 标记已尝试, 避免重试阻塞
+      return;
+    }
+    started = true;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    if (bgmOn) startBgm();
+    updateBtns();
+  }
+
+  // ===== 音乐开关 =====
+  function toggleBgm() {
+    bgmOn = !bgmOn;
+    if (bgmGain) bgmGain.gain.value = bgmOn ? 0.45 : 0;
+    if (bgmOn) {
+      if (ctx && ctx.state === 'running') startBgm();
+    } else {
+      stopBgm();
+    }
+    updateBtns();
+    return bgmOn;
+  }
+  function isBgmOn() { return bgmOn; }
+
+  // ===== 音效开关 =====
+  function toggleSfx() {
+    sfxOn = !sfxOn;
+    if (sfxGain) sfxGain.gain.value = sfxOn ? 0.75 : 0;
+    updateBtns();
+    return sfxOn;
+  }
+  function isSfxOn() { return sfxOn; }
+
+  // ===== 按钮渲染 =====
+  const ICON_MUSIC_ON = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"><path d="M16 40 L16 22 L42 16 L42 36"/><circle cx="13" cy="42" r="5"/><circle cx="39" cy="38" r="5"/></g></svg>`;
+  const ICON_MUSIC_OFF = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"><path d="M16 40 L16 22 L42 16 L42 36"/><circle cx="13" cy="42" r="5"/><circle cx="39" cy="38" r="5"/></g></svg>`;
+  const ICON_SFX_ON = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g fill="#fff" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M10 24 L24 24 L38 14 L38 50 L24 40 L10 40 Z"/></g><g stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"><path d="M46 22 Q54 32 46 42 M52 16 Q64 32 52 48"/></g></svg>`;
+  const ICON_SFX_OFF = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g fill="#fff" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M10 24 L24 24 L38 14 L38 50 L24 40 L10 40 Z"/></g></svg>`;
+
+  let bgmBtnEl = null;
+  let sfxBtnEl = null;
+  function updateBtns() {
+    if (bgmBtnEl) {
+      bgmBtnEl.classList.toggle('off', !bgmOn);
+    }
+    if (sfxBtnEl) {
+      sfxBtnEl.classList.toggle('off', !sfxOn);
+    }
+  }
+  function bindBgmBtn(el) {
+    bgmBtnEl = el;
+    el.innerHTML = ICON_MUSIC_ON + '<span class="lbl">音乐</span>';
+    updateBtns();
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!started) start(); else if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+      toggleBgm();
+    });
+  }
+  function bindSfxBtn(el) {
+    sfxBtnEl = el;
+    el.innerHTML = ICON_SFX_ON + '<span class="lbl">音效</span>';
+    updateBtns();
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!started) start(); else if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+      toggleSfx();
+    });
+  }
+
+  return {
+    start,
+    toggleBgm, isBgmOn, bindBgmBtn,
+    toggleSfx, isSfxOn, bindSfxBtn,
+    click: sfxClick, match: sfxMatch, win: sfxWin, lose: sfxLose,
+  };
+})();
+
+// ============================================================
+// 图标库 (20种精致卡通风格)
+// ============================================================
+const ICONS = {
+  // ===== 1. 笑脸金星星 (圆润渐变 + 大眼红晕) =====
+  star: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="starG" cx="50%" cy="40%">
+        <stop offset="0%" stop-color="#fff7b0"/>
+        <stop offset="55%" stop-color="#ffd633"/>
+        <stop offset="100%" stop-color="#e8a800"/>
+      </radialGradient>
+      <radialGradient id="starHi" cx="35%" cy="30%" r="30%">
+        <stop offset="0%" stop-color="#fff" stop-opacity="0.85"/>
+        <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <path d="M32 4 L41 22 L60 25 L46 38 L50 58 L32 47 L14 58 L18 38 L4 25 L23 22 Z" fill="url(#starG)" stroke="#b07800" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M32 4 L41 22 L60 25 L46 38 L50 58 L32 47 L14 58 L18 38 L4 25 L23 22 Z" fill="url(#starHi)"/>
+    <!-- 眼睛 -->
+    <ellipse cx="25" cy="31" rx="2.6" ry="3.2" fill="#1a1a2e"/>
+    <ellipse cx="39" cy="31" rx="2.6" ry="3.2" fill="#1a1a2e"/>
+    <circle cx="25.6" cy="30" r="1.1" fill="#fff"/>
+    <circle cx="39.6" cy="30" r="1.1" fill="#fff"/>
+    <!-- 脸颊红晕 -->
+    <circle cx="20" cy="38" r="2.8" fill="#ff8a9a" opacity="0.65"/>
+    <circle cx="44" cy="38" r="2.8" fill="#ff8a9a" opacity="0.65"/>
+    <!-- 嘴巴 -->
+    <path d="M27 39 Q32 44 37 39 Q32 42 27 39 Z" fill="#ff5050"/>
+    <path d="M27 39 Q32 44 37 39" fill="none" stroke="#8a1010" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`,
+
+  // ===== 2. 白熊头 (大耳朵 + 脸颊红晕 + 圆润眼神) =====
+  bear: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="bearFace" cx="50%" cy="40%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#e8eaee"/>
+      </radialGradient>
+    </defs>
+    <!-- 耳朵 -->
+    <circle cx="16" cy="18" r="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.6"/>
+    <circle cx="16" cy="18" r="4.5" fill="#ffb0b0" opacity="0.85"/>
+    <circle cx="48" cy="18" r="8" fill="#ffffff" stroke="#1a1a2e" stroke-width="1.6"/>
+    <circle cx="48" cy="18" r="4.5" fill="#ffb0b0" opacity="0.85"/>
+    <!-- 主脸 (椭圆) -->
+    <ellipse cx="32" cy="38" rx="22" ry="20" fill="url(#bearFace)" stroke="#1a1a2e" stroke-width="1.6"/>
+    <!-- 脸蛋红晕 -->
+    <ellipse cx="14" cy="42" rx="5" ry="3.5" fill="#ffb0c0" opacity="0.6"/>
+    <ellipse cx="50" cy="42" rx="5" ry="3.5" fill="#ffb0c0" opacity="0.6"/>
+    <!-- 嘴周白圆 -->
+    <ellipse cx="32" cy="46" rx="12" ry="9" fill="#ffffff"/>
+    <!-- 眼睛 (圆黑 + 高光) -->
+    <ellipse cx="23" cy="32" rx="3.2" ry="3.6" fill="#1a1a2e"/>
+    <ellipse cx="41" cy="32" rx="3.2" ry="3.6" fill="#1a1a2e"/>
+    <circle cx="23.8" cy="30.6" r="1.2" fill="#fff"/>
+    <circle cx="41.8" cy="30.6" r="1.2" fill="#fff"/>
+    <circle cx="22.4" cy="33.2" r="0.6" fill="#fff" opacity="0.7"/>
+    <circle cx="40.4" cy="33.2" r="0.6" fill="#fff" opacity="0.7"/>
+    <!-- 鼻子 -->
+    <ellipse cx="32" cy="42" rx="4" ry="3" fill="#1a1a2e"/>
+    <ellipse cx="31" cy="41" rx="1" ry="0.6" fill="#fff" opacity="0.5"/>
+    <!-- 嘴 -->
+    <path d="M32 45 L32 48" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M28 50 Q32 53 36 50" fill="none" stroke="#1a1a2e" stroke-width="1.4" stroke-linecap="round"/>
+  </svg>`,
+
+  // ===== 3. 绿色圣诞松树 (3 层树冠 + 渐变 + 装饰球) =====
+  pine: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="pineG" x1="0%" x2="100%">
+        <stop offset="0%" stop-color="#5cc06a"/>
+        <stop offset="50%" stop-color="#3a9a4a"/>
+        <stop offset="100%" stop-color="#1a7820"/>
+      </linearGradient>
+    </defs>
+    <!-- 树冠层 -->
+    <path d="M32 6 L20 22 L26 22 L16 36 L24 36 L12 50 L52 50 L40 36 L48 36 L38 22 L44 22 Z" fill="url(#pineG)" stroke="#1a5818" stroke-width="1.8" stroke-linejoin="round"/>
+    <!-- 内部高光 -->
+    <path d="M32 14 L25 24 L29 24 L22 36 L28 36 L20 46 L30 46 L32 16 Z" fill="#7cd87a" opacity="0.35"/>
+    <!-- 树干 -->
+    <rect x="28" y="50" width="8" height="9" fill="#7a4220" stroke="#3a1a08" stroke-width="1.4"/>
+    <path d="M29 51 L29 58" stroke="#9a5828" stroke-width="1"/>
+    <!-- 装饰球 (红黄蓝) -->
+    <circle cx="22" cy="28" r="2.3" fill="#ff4040" stroke="#8a1010" stroke-width="1"/>
+    <circle cx="22.5" cy="27.3" r="0.7" fill="#fff" opacity="0.7"/>
+    <circle cx="42" cy="30" r="2.3" fill="#ffd633" stroke="#a07000" stroke-width="1"/>
+    <circle cx="42.5" cy="29.3" r="0.7" fill="#fff" opacity="0.7"/>
+    <circle cx="28" cy="44" r="2.3" fill="#3a78d8" stroke="#1a4a90" stroke-width="1"/>
+    <circle cx="28.5" cy="43.3" r="0.7" fill="#fff" opacity="0.7"/>
+    <circle cx="38" cy="42" r="2.3" fill="#ff4040" stroke="#8a1010" stroke-width="1"/>
+    <circle cx="38.5" cy="41.3" r="0.7" fill="#fff" opacity="0.7"/>
+    <!-- 顶端金星 -->
+    <path d="M32 1 L33 5 L37 5 L34 8 L35 12 L32 10 L29 12 L30 8 L27 5 L31 5 Z" fill="#ffd633" stroke="#b07800" stroke-width="0.8" stroke-linejoin="round"/>
+  </svg>`,
+
+  // ===== 4. 棕色毛绒靴子 =====
+  boot: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bootG" x1="0%" x2="100%">
+        <stop offset="0%" stop-color="#c07840"/>
+        <stop offset="50%" stop-color="#a05830"/>
+        <stop offset="100%" stop-color="#7a4220"/>
+      </linearGradient>
+    </defs>
+    <!-- 毛绒白圈顶部 -->
+    <ellipse cx="26" cy="11" rx="13" ry="5" fill="#fafafa" stroke="#1a1a2e" stroke-width="1.6"/>
+    <path d="M14 12 Q14 9 18 9 Q22 7 26 9 Q30 7 34 9 Q38 9 38 12" fill="none" stroke="#c0c0c0" stroke-width="1.2" opacity="0.8"/>
+    <!-- 靴筒 -->
+    <path d="M16 14 L36 14 L36 38 L48 38 Q54 38 54 46 L54 54 L16 54 Z" fill="url(#bootG)" stroke="#3a1a08" stroke-width="1.8" stroke-linejoin="round"/>
+    <!-- 靴筒高光条 -->
+    <path d="M19 18 L23 18 L23 36 L19 36 Z" fill="#d08850" opacity="0.6"/>
+    <!-- 鞋头 -->
+    <ellipse cx="40" cy="50" rx="13" ry="6" fill="#c07840" stroke="#3a1a08" stroke-width="1.5"/>
+    <ellipse cx="36" cy="49" rx="4" ry="2" fill="#d8a070" opacity="0.6"/>
+    <!-- 鞋底 -->
+    <path d="M16 52 L54 52 L54 56 L16 56 Z" fill="#3a1a08"/>
+    <!-- 鞋带 -->
+    <line x1="20" y1="20" x2="32" y2="20" stroke="#5a3818" stroke-width="1.4"/>
+    <line x1="20" y1="26" x2="32" y2="26" stroke="#5a3818" stroke-width="1.4"/>
+    <line x1="20" y1="32" x2="32" y2="32" stroke="#5a3818" stroke-width="1.4"/>
+  </svg>`,
+
+  // ===== 5. 蓝色盾牌 (金色边框 + 城堡) =====
+  shield: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="shieldG" x1="0%" x2="0%" y1="0%" y2="100%">
+        <stop offset="0%" stop-color="#5a98e8"/>
+        <stop offset="100%" stop-color="#1a4a90"/>
+      </linearGradient>
+      <linearGradient id="shieldGold" x1="0%" x2="0%" y1="0%" y2="100%">
+        <stop offset="0%" stop-color="#fff7c0"/>
+        <stop offset="50%" stop-color="#ffd633"/>
+        <stop offset="100%" stop-color="#b07800"/>
+      </linearGradient>
+    </defs>
+    <!-- 金边 -->
+    <path d="M32 4 L56 12 L56 32 Q56 52 32 60 Q8 52 8 32 L8 12 Z" fill="url(#shieldGold)" stroke="#8a5818" stroke-width="1.5" stroke-linejoin="round"/>
+    <!-- 内蓝盾 -->
+    <path d="M32 9 L51 16 L51 32 Q51 49 32 56 Q13 49 13 32 L13 16 Z" fill="url(#shieldG)" stroke="#1a4a90" stroke-width="1.4" stroke-linejoin="round"/>
+    <!-- 内蓝盾高光 -->
+    <path d="M32 14 L46 19 L46 32 Q46 44 32 50 Q20 45 18 32 L18 19 Z" fill="#7cb4f0" opacity="0.4"/>
+    <!-- 城堡锁孔 -->
+    <path d="M28 22 L36 22 L36 30 L33 30 L33 36 L31 36 L31 30 L28 30 Z" fill="#fff7c0" stroke="#8a5818" stroke-width="1.2" stroke-linejoin="round"/>
+    <circle cx="32" cy="26" r="1.5" fill="#8a5818"/>
+  </svg>`,
+
+  // ===== 6. 蓝色齿轮 (8齿 + 金属感) =====
+  gear: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="gearG" cx="50%" cy="40%">
+        <stop offset="0%" stop-color="#7cb4f0"/>
+        <stop offset="100%" stop-color="#2a5fb0"/>
+      </radialGradient>
+    </defs>
+    <!-- 8齿 -->
+    <path d="M32 4 L36 11 L43 9 L45 17 L52 19 L52 27 L58 30 L58 34 L52 37 L52 45 L45 47 L43 55 L36 53 L32 60 L28 53 L21 55 L19 47 L12 45 L12 37 L6 34 L6 30 L12 27 L12 19 L19 17 L21 9 L28 11 Z" fill="url(#gearG)" stroke="#0e3a85" stroke-width="1.8" stroke-linejoin="round"/>
+    <!-- 内圈高光 -->
+    <path d="M32 14 L36 18 L42 17 L41 23 L46 26 L43 30 L46 34 L41 37 L42 43 L36 42 L32 46 L28 42 L22 43 L23 37 L18 34 L21 30 L18 26 L23 23 L22 17 L28 18 Z" fill="#9ed4ff" opacity="0.45"/>
+    <!-- 中心轴 -->
+    <circle cx="32" cy="32" r="9" fill="#e8f4ff" stroke="#1a4a90" stroke-width="2"/>
+    <circle cx="32" cy="32" r="5" fill="#3a78d8"/>
+    <circle cx="30" cy="30" r="1.5" fill="#fff" opacity="0.7"/>
+  </svg>`,
+
+  // ===== 7. 蓝色雪花 (六瓣 + 端点小刺 + 中心宝石) =====
+  snowflake: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="snowHi" cx="50%" cy="50%">
+        <stop offset="0%" stop-color="#fff" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <g stroke="#3aa8e8" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <!-- 6 主轴 -->
+      <path d="M32 4 L32 60 M4 32 L60 32 M13 13 L51 51 M13 51 L51 13"/>
+      <!-- 端点小刺 (六轴端点) -->
+      <path d="M32 4 L26 11 M32 4 L38 11 M32 60 L26 53 M32 60 L38 53"/>
+      <path d="M4 32 L11 26 M4 32 L11 38 M60 32 L53 26 M60 32 L53 38"/>
+      <path d="M13 13 L19 11 L21 17 M51 13 L45 11 L43 17 M13 51 L19 53 L21 47 M51 51 L45 53 L43 47"/>
+      <!-- 中段斜枝 -->
+      <path d="M32 18 L27 13 M32 18 L37 13 M32 46 L27 51 M32 46 L37 51"/>
+      <path d="M18 32 L13 27 M18 32 L13 37 M46 32 L51 27 M46 32 L51 37"/>
+    </g>
+    <circle cx="32" cy="32" r="6" fill="url(#snowHi)"/>
+    <circle cx="32" cy="32" r="5" fill="#9ed4ff" stroke="#1a78a8" stroke-width="1.2"/>
+    <circle cx="30" cy="30" r="1.5" fill="#fff"/>
+  </svg>`,
+
+  // ===== 8. 紫色水滴 (高光反射) =====
+  drop: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="dropG" cx="35%" cy="40%">
+        <stop offset="0%" stop-color="#e89af0"/>
+        <stop offset="50%" stop-color="#c878e0"/>
+        <stop offset="100%" stop-color="#7a30a8"/>
+      </radialGradient>
+    </defs>
+    <path d="M32 4 Q52 30 52 44 Q52 58 32 58 Q12 58 12 44 Q12 30 32 4 Z" fill="url(#dropG)" stroke="#5a1080" stroke-width="1.8" stroke-linejoin="round"/>
+    <!-- 边缘亮 -->
+    <path d="M32 8 Q48 30 48 44 Q48 55 32 55 Q16 55 16 44 Q16 30 32 8 Z" fill="#e89af0" opacity="0.45"/>
+    <!-- 主高光 -->
+    <ellipse cx="22" cy="32" rx="5" ry="9" fill="#fff" opacity="0.7" transform="rotate(-25 22 32)"/>
+    <ellipse cx="42" cy="50" rx="3" ry="4" fill="#fff" opacity="0.45"/>
+  </svg>`,
+
+  // ===== 9. 放大镜 (灰色镜 + 木柄) =====
+  magnifier: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="glassG" cx="35%" cy="35%">
+        <stop offset="0%" stop-color="#fff" stop-opacity="0.85"/>
+        <stop offset="100%" stop-color="#a8c0d8"/>
+      </radialGradient>
+    </defs>
+    <!-- 镜片边 -->
+    <circle cx="24" cy="24" r="17" fill="#7a8090" stroke="#1a1a1e" stroke-width="2.5"/>
+    <!-- 镜片玻璃 -->
+    <circle cx="24" cy="24" r="14" fill="url(#glassG)" stroke="#3a4050" stroke-width="1.2"/>
+    <!-- 高光 -->
+    <ellipse cx="18" cy="18" rx="5" ry="6" fill="#fff" opacity="0.7" transform="rotate(-30 18 18)"/>
+    <ellipse cx="29" cy="29" rx="1.5" ry="2" fill="#fff" opacity="0.4"/>
+    <!-- 镜框连接处 -->
+    <circle cx="36" cy="36" r="3" fill="#5a3018" stroke="#1a0808" stroke-width="1"/>
+    <!-- 木柄 -->
+    <path d="M38 38 L58 58" stroke="#7a4220" stroke-width="9" stroke-linecap="round"/>
+    <path d="M40 40 L56 56" stroke="#a06830" stroke-width="4" stroke-linecap="round"/>
+    <path d="M38 38 L58 58" stroke="#3a1a08" stroke-width="1" opacity="0.4"/>
+  </svg>`,
+
+  // ===== 10. 橙色秒表 (顶部按钮 + 表盘刻度) =====
+  clock: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="clockFace" cx="50%" cy="40%">
+        <stop offset="0%" stop-color="#ffe2a0"/>
+        <stop offset="100%" stop-color="#ffb060"/>
+      </radialGradient>
+    </defs>
+    <!-- 顶部按钮 -->
+    <rect x="29" y="4" width="6" height="8" rx="1" fill="#7a5020" stroke="#3a1a08" stroke-width="1.5"/>
+    <rect x="29" y="4" width="6" height="3" rx="1" fill="#a06830"/>
+    <!-- 侧面按钮 -->
+    <rect x="13" y="14" width="8" height="3" rx="1" fill="#7a5020" stroke="#3a1a08" stroke-width="1.2" transform="rotate(-40 17 15.5)"/>
+    <rect x="43" y="14" width="8" height="3" rx="1" fill="#7a5020" stroke="#3a1a08" stroke-width="1.2" transform="rotate(40 47 15.5)"/>
+    <!-- 表盘 -->
+    <circle cx="32" cy="38" r="22" fill="url(#clockFace)" stroke="#7a4818" stroke-width="2.5"/>
+    <!-- 表盘内圈 -->
+    <circle cx="32" cy="38" r="18" fill="none" stroke="#c08848" stroke-width="1" opacity="0.5"/>
+    <!-- 刻度 -->
+    <g stroke="#5a3018" stroke-width="2" stroke-linecap="round">
+      <path d="M32 18 L32 22 M32 54 L32 58 M12 38 L16 38 M48 38 L52 38"/>
+    </g>
+    <g stroke="#7a4818" stroke-width="1.4" stroke-linecap="round">
+      <path d="M20 26 L22 28 M44 26 L42 28 M20 50 L22 48 M44 50 L42 48 M14 30 L17 31 M50 30 L47 31 M14 46 L17 45 M50 46 L47 45"/>
+    </g>
+    <!-- 数字12 3 6 9 -->
+    <text x="32" y="30" font-size="6" font-weight="900" fill="#5a3018" text-anchor="middle" font-family="Arial">12</text>
+    <text x="46" y="40" font-size="6" font-weight="900" fill="#5a3018" text-anchor="middle" font-family="Arial">3</text>
+    <text x="32" y="51" font-size="6" font-weight="900" fill="#5a3018" text-anchor="middle" font-family="Arial">6</text>
+    <text x="18" y="40" font-size="6" font-weight="900" fill="#5a3018" text-anchor="middle" font-family="Arial">9</text>
+    <!-- 指针 -->
+    <path d="M32 38 L32 22" stroke="#3a1a08" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M32 38 L44 40" stroke="#c01818" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="32" cy="38" r="2.5" fill="#3a1a08"/>
+    <circle cx="31.4" cy="37.4" r="0.8" fill="#fff" opacity="0.7"/>
+  </svg>`,
+
+  // ===== 11. 灰色扳手 (金属质感) =====
+  wrench: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="wrenchG" x1="0%" x2="100%" y1="0%" y2="100%">
+        <stop offset="0%" stop-color="#d8dde5"/>
+        <stop offset="50%" stop-color="#a0a8b8"/>
+        <stop offset="100%" stop-color="#5a6068"/>
+      </linearGradient>
+    </defs>
+    <!-- 整体形状 -->
+    <path d="M8 8 L20 4 Q28 4 32 10 L40 18 L48 16 Q56 16 58 22 L58 30 L50 32 L46 26 L40 26 L26 40 L40 54 L42 58 L34 58 L20 46 L8 32 L6 22 L8 14 Z" fill="url(#wrenchG)" stroke="#1a1a2e" stroke-width="1.6" stroke-linejoin="round"/>
+    <!-- 螺栓孔 -->
+    <circle cx="18" cy="18" r="4" fill="#d8dde5" stroke="#3a4050" stroke-width="1.4"/>
+    <circle cx="18" cy="18" r="2" fill="#1a1a2e"/>
+    <!-- 上端六角头 -->
+    <path d="M48 18 L56 18 L58 22 L58 26 L52 28 L46 26 L46 22 Z" fill="#c8d0db" stroke="#3a4050" stroke-width="1.2"/>
+    <!-- 高光 -->
+    <path d="M14 12 Q20 8 26 10 L36 20" fill="none" stroke="#fff" stroke-width="2" opacity="0.5" stroke-linecap="round"/>
+  </svg>`,
+
+  // ===== 12. 信封 (白纸 + 红心蜡封) =====
+  envelope: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="envG" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#f0f4f8"/>
+      </linearGradient>
+    </defs>
+    <!-- 信封主体 -->
+    <rect x="6" y="18" width="52" height="34" rx="3" fill="url(#envG)" stroke="#1a1a2e" stroke-width="1.6"/>
+    <!-- 信封左右折线 -->
+    <path d="M6 18 L32 40 L58 18" fill="none" stroke="#1a1a2e" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M6 52 L24 32 M58 52 L40 32" stroke="#1a1a2e" stroke-width="1" fill="none" opacity="0.4"/>
+    <!-- 红心蜡封 -->
+    <path d="M32 30 Q28 26 25 28 Q22 30 25 33 L32 39 L39 33 Q42 30 39 28 Q36 26 32 30 Z" fill="#e04848" stroke="#8a1010" stroke-width="1.4" stroke-linejoin="round"/>
+    <!-- 蜡封高光 -->
+    <ellipse cx="29.5" cy="29.5" rx="1.5" ry="1" fill="#ff9090" opacity="0.7"/>
+    <ellipse cx="32" cy="33" rx="2" ry="1.5" fill="#ff6060" opacity="0.5"/>
+  </svg>`,
+
+  // ===== 13. 棕色钱袋 ($ 符号) =====
+  moneybag: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="bagG" cx="35%" cy="40%">
+        <stop offset="0%" stop-color="#c89060"/>
+        <stop offset="100%" stop-color="#7a4820"/>
+      </radialGradient>
+      <linearGradient id="bagStrap" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#7a4820"/>
+        <stop offset="100%" stop-color="#3a1a08"/>
+      </linearGradient>
+    </defs>
+    <!-- 扎带 -->
+    <ellipse cx="32" cy="11" rx="12" ry="3.5" fill="url(#bagStrap)" stroke="#1a0808" stroke-width="1.2"/>
+    <path d="M22 12 L42 12 L40 18 L24 18 Z" fill="#3a1a08"/>
+    <!-- 袋身 -->
+    <path d="M22 18 L42 18 Q56 28 52 48 Q48 58 32 58 Q16 58 12 48 Q8 28 22 18 Z" fill="url(#bagG)" stroke="#5a3818" stroke-width="1.8" stroke-linejoin="round"/>
+    <!-- 高光 -->
+    <path d="M20 24 Q16 34 22 44" fill="none" stroke="#e8c890" stroke-width="3.5" opacity="0.55" stroke-linecap="round"/>
+    <!-- $ 符号 -->
+    <text x="32" y="48" font-size="22" font-weight="900" fill="#ffd633" stroke="#8a5818" stroke-width="1" text-anchor="middle" font-family="Arial Black">$</text>
+    <text x="30" y="46" font-size="22" font-weight="900" fill="#fff7c0" text-anchor="middle" opacity="0.4" font-family="Arial Black">$</text>
+  </svg>`,
+
+  // ===== 14. 灰骨头 (4端圆球 + 中段) =====
+  bone: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="boneG" cx="40%" cy="35%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#c8ccd2"/>
+      </radialGradient>
+    </defs>
+    <path d="M14 22 Q11 16 14 12 Q20 8 26 11 Q30 12 30 18 L30 26 L34 26 L34 18 Q34 12 38 11 Q44 8 50 12 Q53 16 50 22 Q48 26 44 28 L44 36 Q48 38 50 42 Q53 48 50 52 Q44 56 38 53 Q34 52 34 46 L34 38 L30 38 L30 46 Q30 52 26 53 Q20 56 14 52 Q11 48 14 42 Q16 38 20 36 L20 28 Q16 26 14 22 Z" fill="url(#boneG)" stroke="#3a4050" stroke-width="1.6" stroke-linejoin="round"/>
+    <ellipse cx="19" cy="17" rx="2.5" ry="1.5" fill="#fff" opacity="0.7"/>
+    <ellipse cx="45" cy="17" rx="2.5" ry="1.5" fill="#fff" opacity="0.7"/>
+    <ellipse cx="19" cy="47" rx="2.5" ry="1.5" fill="#fff" opacity="0.7"/>
+    <ellipse cx="45" cy="47" rx="2.5" ry="1.5" fill="#fff" opacity="0.7"/>
+  </svg>`,
+
+  // ===== 15. 灰色铁锤 (锤头 + 木柄) =====
+  hammer: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="hammerG" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#d0d4da"/>
+        <stop offset="50%" stop-color="#8a9098"/>
+        <stop offset="100%" stop-color="#3a4050"/>
+      </linearGradient>
+    </defs>
+    <!-- 锤头 -->
+    <rect x="6" y="14" width="36" height="22" rx="3" fill="url(#hammerG)" stroke="#1a1a1e" stroke-width="1.8"/>
+    <!-- 锤头顶端帽 -->
+    <rect x="6" y="14" width="36" height="6" fill="#fff" opacity="0.25"/>
+    <!-- 锤头中部线 -->
+    <path d="M8 25 L40 25" stroke="#1a1a1e" stroke-width="1.4" opacity="0.6"/>
+    <!-- 锤头尖端 -->
+    <path d="M42 14 L52 18 L52 32 L42 36 Z" fill="#5a6068" stroke="#1a1a1e" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M44 16 L50 19" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <!-- 木柄 -->
+    <rect x="30" y="36" width="7" height="22" fill="#a06830" stroke="#3a1a08" stroke-width="1.5" transform="rotate(20 33.5 47)"/>
+    <path d="M31 38 L31 56" stroke="#3a1a08" stroke-width="0.8" transform="rotate(20 33.5 47)"/>
+    <path d="M36 38 L36 56" stroke="#c89060" stroke-width="1" opacity="0.6" transform="rotate(20 33.5 47)"/>
+    <!-- 柄底 -->
+    <ellipse cx="34" cy="58" rx="4" ry="2" fill="#7a4820" stroke="#3a1a08" stroke-width="1" transform="rotate(20 34 58)"/>
+  </svg>`,
+
+  // ===== 16. 蓝色水滴 (小水滴) =====
+  bdrop: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="bdropG" cx="35%" cy="40%">
+        <stop offset="0%" stop-color="#9adcff"/>
+        <stop offset="60%" stop-color="#4ab0e8"/>
+        <stop offset="100%" stop-color="#1a78a8"/>
+      </radialGradient>
+    </defs>
+    <path d="M32 6 Q50 30 50 44 Q50 58 32 58 Q14 58 14 44 Q14 30 32 6 Z" fill="url(#bdropG)" stroke="#0e5070" stroke-width="1.8" stroke-linejoin="round"/>
+    <ellipse cx="24" cy="34" rx="5" ry="9" fill="#fff" opacity="0.7" transform="rotate(-25 24 34)"/>
+    <ellipse cx="42" cy="50" rx="3" ry="3.5" fill="#fff" opacity="0.5"/>
+  </svg>`,
+
+  // ===== 17. 六角小雪花 =====
+  snowflake2: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#2a98d8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M32 6 L32 58 M8 32 L56 32 M14 14 L50 50 M14 50 L50 14"/>
+      <path d="M32 6 L25 14 M32 6 L39 14 M32 58 L25 50 M32 58 L39 50 M8 32 L16 25 M8 32 L16 39 M56 32 L48 25 M56 32 L48 39"/>
+    </g>
+    <circle cx="32" cy="32" r="4" fill="#9adcff" stroke="#0e5070" stroke-width="1"/>
+    <circle cx="31" cy="31" r="1.4" fill="#fff"/>
+  </svg>`,
+
+  // ===== 18. 金色奖章 (蓝色绶带 + 金奖) =====
+  medal: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="medalG" cx="50%" cy="40%">
+        <stop offset="0%" stop-color="#fff7c0"/>
+        <stop offset="55%" stop-color="#ffd633"/>
+        <stop offset="100%" stop-color="#b07800"/>
+      </radialGradient>
+    </defs>
+    <!-- 蓝色绶带 -->
+    <path d="M18 4 L22 24 L42 24 L46 4 Z" fill="#5a78d8" stroke="#1a3070" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M14 2 L20 26 L36 26 L42 2 Z" fill="#3a58b8" stroke="#1a3070" stroke-width="1.2" stroke-linejoin="round" opacity="0.8"/>
+    <path d="M22 4 L20 22" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <!-- 金奖章 -->
+    <circle cx="32" cy="42" r="20" fill="url(#medalG)" stroke="#8a5818" stroke-width="2.2"/>
+    <!-- 内圈 -->
+    <circle cx="32" cy="42" r="15" fill="none" stroke="#8a5818" stroke-width="1.2"/>
+    <circle cx="32" cy="42" r="15" fill="#fff" opacity="0.15"/>
+    <!-- 数字 1 -->
+    <text x="32" y="50" font-size="22" font-weight="900" fill="#8a4818" stroke="#5a2810" stroke-width="0.5" text-anchor="middle" font-family="Arial Black">1</text>
+    <!-- 高光 -->
+    <ellipse cx="26" cy="32" rx="4" ry="3" fill="#fff" opacity="0.45"/>
+  </svg>`,
+
+  // ===== 19. 橙色咖啡杯 (蒸汽 + 杯子) =====
+  coffee: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="cupG" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#ffaa60"/>
+        <stop offset="100%" stop-color="#d87020"/>
+      </linearGradient>
+    </defs>
+    <!-- 蒸汽 -->
+    <path d="M22 14 Q22 10 26 10 Q22 6 26 2 M32 12 Q32 8 36 8 M42 14 Q42 10 46 10 Q42 6 46 2" stroke="#e0e0e0" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
+    <!-- 杯身 -->
+    <path d="M10 24 L42 24 L40 50 Q40 58 32 58 L24 58 Q14 58 14 50 Z" fill="url(#cupG)" stroke="#3a1a08" stroke-width="1.8" stroke-linejoin="round"/>
+    <!-- 把手 -->
+    <path d="M42 30 Q54 30 54 40 Q54 50 42 50" fill="none" stroke="#3a1a08" stroke-width="2.5"/>
+    <path d="M42 32 Q52 32 52 40 Q52 48 42 48" fill="none" stroke="#ffaa60" stroke-width="1.5"/>
+    <!-- 杯口 -->
+    <ellipse cx="26" cy="22" rx="14" ry="4" fill="#ffaa60" stroke="#3a1a08" stroke-width="1.5"/>
+    <ellipse cx="26" cy="22" rx="11" ry="2.5" fill="#5a3018"/>
+    <!-- 高光 -->
+    <path d="M14 30 Q14 36 16 44" fill="none" stroke="#fff" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+  </svg>`,
+
+  // ===== 20. 红心 (双瓣 + 高光) =====
+  heart: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="heartG" cx="35%" cy="35%">
+        <stop offset="0%" stop-color="#ff8090"/>
+        <stop offset="60%" stop-color="#ff4060"/>
+        <stop offset="100%" stop-color="#a01020"/>
+      </radialGradient>
+    </defs>
+    <path d="M32 56 Q4 36 4 22 Q4 10 14 8 Q24 8 32 18 Q40 8 50 8 Q60 10 60 22 Q60 36 32 56 Z" fill="url(#heartG)" stroke="#8a1010" stroke-width="1.8" stroke-linejoin="round"/>
+    <ellipse cx="20" cy="20" rx="5" ry="3.5" fill="#fff" opacity="0.6" transform="rotate(-30 20 20)"/>
+    <ellipse cx="14" cy="26" rx="2" ry="3" fill="#fff" opacity="0.35"/>
+    <path d="M48 22 Q44 26 42 28" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.5"/>
+  </svg>`,
+};
+
+const ICON_KEYS = Object.keys(ICONS);
+
+// ============================================================
+// 棋盘布局：顶部两角 + 中间错位 0.5 卡宽 (产生堆叠遮挡) + 底部收尾
+// ============================================================
+function buildRows(count, W) {
+  // 顶角 [0, W-1] 整数
+  const rows = [[0, W-1]];
+  let remain = count - 2;
+  // 错位行: 半整数 [0.5, 2.5, ...] 张数 = 偶数行 - 1 (适配 W)
+  // 全列行: 整数 [0, 2, 4, ...] 张数 = (W-1)/2 + 1 = (W+1)/2
+  // W=7: 全列行 4 张 [0,2,4,6], 错位行 3 张 [0.5,2.5,4.5]
+  // W=9: 全列行 5 张 [0,2,4,6,8], 错位行 4 张 [0.5,2.5,4.5,6.5]
+  // W=11: 全列行 6 张 [0,2,4,6,8,10], 错位行 5 张 [0.5,2.5,4.5,6.5,8.5]
+  const fullCols = Math.floor((W + 1) / 2);  // 全列行张数
+  const offsetCols = fullCols - 1;            // 错位行张数
+  const pat = [
+    Array.from({length: offsetCols}, (_, i) => i * 2 + 0.5),  // 错位行 [0.5, 2.5, ...]
+    Array.from({length: fullCols}, (_, i) => i * 2),         // 全列行 [0, 2, ...]
+  ];
+  let pi = 0;
+  while (remain > 0) {
+    const next = pat[pi % 2];
+    if (next.length <= remain) {
+      rows.push(next.slice());
+      remain -= next.length;
+      pi++;
+    } else {
+      // 收尾
+      if (remain === 1) rows.push([fullCols - 1]);  // 中心
+      else if (remain === 2) rows.push([fullCols - 2, fullCols]);
+      else if (remain === 3) rows.push([fullCols - 2, fullCols - 1, fullCols]);
+      else if (remain === 4) rows.push([0.5, 2.5, 4.5, 6.5].slice(0, 4));
+      else rows.push(Array.from({length: remain}, (_, i) => i * 2));
+      remain = 0;
+    }
+  }
+  return rows;
+}
+
+// 关卡配置
+// ICON_KEYS.length = 20 (定义在下方)
+function levelConfig(n) {
+  // ===== 难度随关卡单调递增 =====
+  //  - 类型数 typeCount: L1=5 → L20=20 (类型越多越难凑齐 3 张)
+  //  - 卡数 count      : = 类型数 × 3 (规模随类型递增 → 行数/遮挡深度递增)
+  //  - 打乱强度        : L1 几乎顺序(易) → L20 强随机(难), 见 generateSolvable
+  const t = (n - 1) / (MAX_LEVEL - 1);                          // 0..1 进度
+  const typeCount = Math.min(20, Math.max(5, Math.round(5 + t * 15)));
+  // 主棋盘实际卡数 (必须为 3 的倍数)
+  const realCount = typeCount * 3;
+  const W = typeCount <= 6 ? 7 : (typeCount <= 11 ? 9 : 11);
+  const rows = buildRows(realCount, W);
+  return { rows, count: realCount, typeCount, W };
+}
+
+// 可复现伪随机 (同一关每次布局一致)
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let tt = Math.imul(a ^ a >>> 15, 1 | a);
+    tt = tt + Math.imul(tt ^ tt >>> 7, 61 | tt) ^ tt;
+    return ((tt ^ tt >>> 14) >>> 0) / 4294967296;
+  };
+}
+// 从 [0, typeCount) 中挑选 count 个互不相同的类型, 尽量避开 avoid 集合 (让左右两堆尽量不同)
+function pickDistinctTypes(rng, typeCount, count, avoid) {
+  const chosen = [];
+  const avail = [];
+  for (let i = 0; i < typeCount; i++) if (!avoid || !avoid.has(i)) avail.push(i);
+  while (chosen.length < count && avail.length) {
+    const idx = Math.floor(rng() * avail.length);
+    chosen.push(avail[idx]); avail.splice(idx, 1);
+  }
+  // 类型数不足时放宽 (允许与 avoid 重叠)
+  if (chosen.length < count) {
+    const rest = [];
+    for (let i = 0; i < typeCount; i++) if (!chosen.includes(i)) rest.push(i);
+    while (chosen.length < count && rest.length) {
+      const idx = Math.floor(rng() * rest.length);
+      chosen.push(rest[idx]); rest.splice(idx, 1);
+    }
+  }
+  return chosen;
+}
+
+// ============================================================
+// 状态
+// ============================================================
+const TILE_SIZE_BASE = 64;   // 基准卡尺寸
+const COL_GAP = 4;           // 列间隙
+const ROW_GAP_BASE = 32;     // 基准行间距
+
+function getTileSize(W) {
+  // 棋盘目标宽 ~520px: TILE_SIZE = 520/W, 但最小 40
+  return Math.max(40, Math.min(64, Math.floor(520 / W)));
+}
+function getRowGap(TS) { return Math.floor(TS * 0.5); }
+function getColGap(TS) { return 0; }
+
+// board 渲染: 棋盘居中, col * TILE_SIZE + 偏移
+function colToX(col, W) {
+  return col * state.TS + state.TS/2;
+}
+function rowToY(row) {
+  return row * state.RG + state.TS/2;
+}
+
+const state = {
+  level: 1,
+  tiles: [],        // {id, type, col, row, layer, removed}
+  tray: [],         // {id, type, srcId, srcCol, srcRow}
+  stash: [],        // {id, type, srcId, srcCol, srcRow}
+  props: { remove: 2, undo: 2, shuffle: 2 },
+  history: [],      // 用于撤回
+  won: false,
+  lost: false,
+  cfg: null,
+  W: 9,
+  TS: 64,           // 实际卡尺寸
+  RG: 32,           // 实际行间距
+};
+
+// ============================================================
+// 关卡进度 (localStorage)
+// ============================================================
+const MAX_LEVEL = 20;
+const PROGRESS_KEY = 'mqhxn_progress_v1';   // 已通关的最高关卡 (解锁到此处 +1)
+
+function loadUnlocked() {
+  try {
+    const v = parseInt(localStorage.getItem(PROGRESS_KEY) || '1', 10);
+    if (isNaN(v) || v < 1) return 1;
+    return Math.min(v, MAX_LEVEL);
+  } catch (e) { return 1; }
+}
+function saveUnlocked(n) {
+  try { localStorage.setItem(PROGRESS_KEY, String(n)); } catch (e) {}
+}
+function markCleared(level) {
+  // 通关后解锁下一关
+  const unlocked = loadUnlocked();
+  if (level >= unlocked && level < MAX_LEVEL) {
+    saveUnlocked(level + 1);
+  }
+  if (level >= MAX_LEVEL) saveUnlocked(MAX_LEVEL);
+}
+function isLevelUnlocked(n) {
+  return n <= loadUnlocked();
+}
+function resetProgress() {
+  try { localStorage.removeItem(PROGRESS_KEY); } catch (e) {}
+}
+
+// 求解器遮挡判定: 与游戏 isClickable 的 20% 阈值完全一致 (遮挡 >20% 不可点),
+// 用解析公式代替 64 采样, 更快。保证 "求解器能过 ⇒ 实际一定可玩"。
+function solverClickable(tiles, tile, TS, RG) {
+  if (tile.removed) return false;
+  if (tile.isPile) return true;               // 顶部堆叠卡永远可直接点 (玩家自由选用)
+  const rowStep = (RG || 32) / (TS || 64);
+  for (const o of tiles) {
+    if (o === tile || o.removed || o.isPile) continue;   // 顶堆卡不压住棋盘
+    if (o.row >= tile.row) continue;                          // 只认上方卡
+    if (Math.abs(o.col - tile.col) >= 0.5 + 1e-9) continue;   // 无水平重叠 (错位需 <半卡宽)
+    // 纵向视觉重叠比例 = 1 - (行差)*rowStep ; 仅当重叠 >20% 才算被压
+    const overlap = 1 - (tile.row - o.row) * rowStep;
+    if (overlap > 0.20) return false;
+  }
+  return true;
+}
+
+// 模拟"理想玩家"能否在 tray(7 格)容错内清空棋盘 → 保证生成的关卡可解
+// 顶部堆叠卡作为"永远可点"的自由资源并入模拟 (pileTypes), 使验证与真实游戏一致
+// 策略: 优先凑三连 → 其次凑对 → tray 偏满时优先选已有 type, 否则任意可点卡
+function simulateSolvable(tiles0, TS, RG, pileTypes) {
+  const tiles = tiles0.map(t => ({ ...t, removed: false }));
+  // 顶堆卡: 永远可点、不压任何棋盘卡 (row 设极小, isPile 标记)
+  const pileTiles = (pileTypes || []).map((ty, i) => ({ isPile: true, type: ty, removed: false, id: 'pile' + i, row: -100, col: 0 }));
+  const all = tiles.concat(pileTiles);
+  let tray = [];
+  let guard = all.length * 6 + 80;
+  while (guard-- > 0) {
+    const clickable = all.filter(x => !x.removed && solverClickable(all, x, TS, RG));
+    if (clickable.length === 0) {
+      return all.every(x => x.removed);     // 无卡可点: 全清=成功, 否则卡死
+    }
+    let pick = null;
+    for (const c of clickable) {              // 1) 能立刻三连
+      if (tray.filter(x => x === c.type).length >= 2) { pick = c; break; }
+    }
+    if (!pick) for (const c of clickable) {   // 2) 凑对 (使某 type 达 2)
+      if (tray.filter(x => x === c.type).length === 1) { pick = c; break; }
+    }
+    if (!pick && tray.length >= 4) for (const c of clickable) {  // 3) 避免引入新散牌
+      if (tray.includes(c.type)) { pick = c; break; }
+    }
+    if (!pick) pick = clickable[0];
+    pick.removed = true;
+    tray.push(pick.type);
+    const counts = {};
+    tray.forEach((x, i) => { (counts[x] = counts[x] || []).push(i); });
+    for (const k in counts) if (counts[k].length >= 3) {
+      const idx = counts[k].slice(0, 3);
+      tray = tray.filter((_, i) => !idx.includes(i));
+    }
+    if (tray.length >= 7) return false;       // 爆槽 → 此分布不可解
+  }
+  return false;
+}
+
+// 可解性生成: 接收【已补偿好数量的棋盘多重集 boardMultiset】与顶堆类型 pileTypes
+//  - 顺序基线: 相同 type 在 row-major 顺序中相邻 (同种连片, 低关更易)
+//  - 高关: 在基线上做随关卡递增的随机交换, 增加"找 3 张相同"难度
+//  - 用 simulateSolvable (含顶堆作自由资源) 验证可解, 不过则换种子重洗; 兜底回顺序
+// TS, RG = 实际卡尺寸/行间距 (与渲染/isClickable 一致, 用于精确可解验证)
+function generateSolvable(positions, boardMultiset, level, TS, RG, pileTypes) {
+  const N = positions.length;  // = boardMultiset.length
+  const t = (level - 1) / (MAX_LEVEL - 1);          // 0..1
+  const sortedPos = positions.map((p, i) => ({ ...p, idx: i }))
+    .sort((a, b) => a.row - b.row || a.col - b.col);
+  const seqMulti = boardMultiset.slice().sort((a, b) => a - b);  // 同种相邻
+  const sequential = () => {
+    const types = new Array(N);
+    for (let i = 0; i < N; i++) types[sortedPos[i].idx] = seqMulti[i];
+    return types;
+  };
+  const base = sequential();
+  // 前期(低关)提高打乱基数让"找 3 张相同"更有挑战: L1≈4 次, L20≈10 次
+  // (上限 10 卡在 N*0.18≈10.8 求解器可解红线内, 避免高关兜底回顺序)
+  const maxSwaps = Math.max(4, Math.round(4 + t * 6));
+  let seed = ((level + 1) * 2654435761) >>> 0;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const types = base.slice();
+    for (let s = 0; s < maxSwaps; s++) {
+      const i = Math.floor(rnd() * N), j = Math.floor(rnd() * N);
+      const tmp = types[i]; types[i] = types[j]; types[j] = tmp;
+    }
+    const testTiles = positions.map((p, i) => ({ ...p, type: types[i], removed: false }));
+    if (simulateSolvable(testTiles, TS, RG, pileTypes)) return types;
+  }
+  return base;                                        // 兜底: 严格顺序
+}
+
+// ============================================================
+// 可点判定：8x8=64 采样点, 必须有 ≥52 个 (~81%) 不被上方卡视觉覆盖才可选
+// 即: 遮挡 >19% (揭示 <81%) 不能选——严格符合用户要求 "遮挡 >20% 不能直接选中"
+//
+// 关键: 行间距 RG < tile 高 TS 时, 上下两层 tile 视觉重叠 (TS - RG)。
+// 覆盖 row 范围 = [other.row*RG/TS - 0.5, other.row*RG/TS + 0.5]
+//
+// 死局保护 (死局保护只覆盖 "立即可三连" 场景, 不强制被压卡也可点):
+//   - 剩余 ≤ 3 张: 必可凑一组三连, 全部强制可点 (游戏收尾)
+//   - 否则: 严格按视觉重叠率判定 (即使只剩 4 张, 被压的也不能点)
+// ============================================================
+function isClickable(tile) {
+  if (tile.removed) return false;
+  // 死局保护 (谨慎): 只在剩余 ≤3 张时强制全部可点 (≤3 必是同 type 或可凑齐 3)
+  let remain = 0;
+  for (const t of state.tiles) if (!t.removed) remain++;
+  if (remain > 0 && remain <= 3) return true;
+
+  const TS = state.TS || 64;
+  const RG = state.RG || 32;
+  const rowStep = RG / TS;  // 标准化行间距 (RG< TS → <1)
+
+  const N = 8;
+  const cell = 1 / N;       // 0.125 标准化单位
+  const NEED = Math.floor(N * N * 0.81);  // 64*0.81=51.84→51, 至少 51 不被覆盖 → 揭示 ≥80%
+  let uncovered = 0;
+
+  // 关键修复: 旧版把 presser 覆盖区用 oyMin/oyMax 算, 但 py 是基于 TS 尺度 (tile 中心归一化),
+  //   presser 视觉范围是基于 RG 尺度, 两者不一致导致横向错位 50% 重叠算不出。
+  // 修正: 统一到屏幕像素尺度对比。
+  // 推导:
+  //   presser (other) 在屏幕占 [other.col*TS, other.col*TS+TS] × [other.row*RG, other.row*RG+TS]
+  //   tile 样本 (px, py) 在屏幕占 x = (px + 0.5) * TS, y = (py - tile.row) * TS + tile.row*RG + TS/2
+  //   重叠条件:
+  //   - 横向: |other.col - px| <= 0.5 (用 <= 包含边界)
+  //   - 纵向: py 落在 [other.row*RG, other.row*RG + TS] 反算的 py 区间
+  //     即 colShift = tile.row*(1-rowStep) - 0.5, oyMin = colShift + other.row*rowStep, oyMax = oyMin + rowStep
+  const colShift = tile.row * (1 - rowStep) - 0.5;
+
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const dx = -0.5 + (i + 0.5) * cell;
+      const dy = -0.5 + (j + 0.5) * cell;
+      const px = tile.col + dx;     // tile 内归一化 x
+      const py = tile.row + dy;     // tile 内归一化 y
+      let covered = false;
+      for (const other of state.tiles) {
+        if (other.id === tile.id || other.removed) continue;
+        // 覆盖者必须是【在上方】的卡: rowToY 中 row 越小越靠上, 且 zIndex 越大越靠前
+        if (other.row >= tile.row) continue;
+
+        // 横向: presser 占 [other.col*TS, other.col*TS+TS]
+        const dxOK = Math.abs(other.col - px) <= 0.5;
+        // 纵向: 屏幕 y 范围折算到 tile.py 空间
+        //   presser 像素 y 范围 [other.row*RG, other.row*RG+TS]
+        //   sample py 像素 y = py*TS + tile.row*RG - tile.row*TS + TS/2
+        //   折算后: oyMin = tile.row + (other.row - tile.row)*rowStep - 0.5
+        //           oyMax = oyMin + 1  (presser 高度 TS 占 1 个 py 单位)
+        const oyMin = colShift + other.row * rowStep;
+        const oyMax = oyMin + 1;
+        if (dxOK && py >= oyMin && py < oyMax) {
+          covered = true;
+          break;
+        }
+      }
+      if (!covered) {
+        uncovered++;
+        if (uncovered >= NEED) return true;
+      }
+    }
+  }
+  return false;
+}
+
+// ============================================================
+// 顶部堆叠堆内可点判定: 上方有未消除的卡 → 下层被压 >20% → 不能直接选
+// 只有最上层 (无任何上层未消除卡) 可点 (符合"被压超 20% 不能选")
+// ============================================================
+function isTopPileCardClickable(pile, tile) {
+  for (const o of pile.tiles) {
+    if (o.id === tile.id || o.removed) continue;
+    if (o.layer > tile.layer) return false;
+  }
+  return true;
+}
+
+// ============================================================
+// 游戏逻辑
+// ============================================================
+function initLevel(n) {
+  state.level = n;
+  state.cfg = levelConfig(n);
+  state.W = state.cfg.W;
+  state.TS = getTileSize(state.W);
+  state.RG = getRowGap(state.TS);
+
+  // 收集所有 (col, row) 位置
+  const positions = [];
+  for (let r = 0; r < state.cfg.rows.length; r++) {
+    for (const c of state.cfg.rows[r]) {
+      positions.push({ col: c, row: r });
+    }
+  }
+  // 生成 type 之前, 先确定顶部左右两堆的各 3 个图标 (互相不同, 且两堆尽量不同)
+  const typeCount = state.cfg.typeCount;
+  const rng = mulberry32((((n + 0x9E37) * 2654435761) >>> 0) || 1);
+  // 左堆 3 个互不相同; 右堆 3 个互不相同, 且尽量避开左堆用过的类型
+  const pileL = pickDistinctTypes(rng, typeCount, 3, new Set());
+  const pileR = pickDistinctTypes(rng, typeCount, 3, new Set(pileL));
+  const pileTypes = [...pileL, ...pileR];   // 顶堆 6 张 (左右各 3, 上下各不相同)
+
+  // 棋盘各 type 数量补偿: 让 (棋盘数 + 顶堆数) 每类都是 3 的倍数 → 整体可解
+  const P = {};
+  for (const tp of pileTypes) P[tp] = (P[tp] || 0) + 1;
+  // 修复: P[tp] 必须为有效数字 (pileTypes 可能漏掉某些 type, 不能让 B 算成 NaN)
+  for (let tp = 0; tp < typeCount; tp++) if (P[tp] === undefined) P[tp] = 0;
+  const B = new Array(typeCount).fill(0);
+  for (let tp = 0; tp < typeCount; tp++) B[tp] = (3 - ((P[tp] || 0) % 3)) % 3;
+  let sumB = 0; for (let tp = 0; tp < typeCount; tp++) sumB += B[tp];
+  // 关键修复: 原代码假定 sumB = typeCount*3 - 6 (每类棋盘+顶堆共 3 张), 但 pickDistinctTypes
+  //   不保证覆盖全部 [0,typeCount), 某些 type 在顶堆完全不出现 → P[tp]=0 → B[tp]=0,
+  //   此时 sumB 已 < typeCount*3-6, 已有 type 在棋盘 0 张; deficit 计算按 typeCount*3 反而为正,
+  //   会继续以 k 循环给每个 type +3, 但补完长度仍可能 != positions.length.
+  // 新方案: 直接把 boardMultiset 补足到 positions.length (且每类保证 3 倍数, 不再死板按 deficit 走)
+  const required = positions.length;
+  // 先对齐到 typeCount*3 (凑齐 3 的倍数, 使每类可独立消除)
+  let deficit = typeCount * 3 - sumB;
+  let k = 0;
+  while (deficit > 0) { B[k % typeCount] += 3; deficit -= 3; k++; }
+  // 再裁剪 / 补到 positions.length, 优先保证可解性 (按 3 倍数调整)
+  let curSum = 0; for (const v of B) curSum += v;
+  // 多于 required 时, 按 (k%typeCount) 倒序剥, 每剥 3 张同时减一类型
+  while (curSum > required) {
+    // 找可减的类型: 棋盘≥3 张才减, 否则留 0 张看下一类
+    let reduced = false;
+    for (let off = typeCount - 1; off >= 0; off--) {
+      const idx = (k + off) % typeCount;
+      if (B[idx] >= 3) { B[idx] -= 3; curSum -= 3; reduced = true; break; }
+    }
+    if (!reduced) break;  // 防死循环
+  }
+  while (curSum < required) {
+    B[k % typeCount] += 3;
+    curSum += 3;
+    k++;
+  }
+  const boardMultiset = [];
+  for (let tp = 0; tp < typeCount; tp++) for (let i = 0; i < B[tp]; i++) boardMultiset.push(tp);
+
+  // 生成 types (随关卡递增打乱, 内置求解器用精确遮挡 + 顶堆自由资源保证可解)
+  const types = generateSolvable(positions, boardMultiset, n, state.TS, state.RG, pileTypes);
+  // 构造 tiles
+  state.tiles = positions.map((p, i) => ({
+    id: i,
+    type: types[i],
+    col: p.col,
+    row: p.row,
+    layer: 0,
+    removed: false,
+  }));
+  // 顶部左右堆叠: 每堆 3 张各不相同 (上下大概率不同), 两堆之间也尽量不同
+  state.topLeft = {
+    types: pileL,
+    tiles: pileL.map((ty, i) => ({ id: 1000 + i, type: ty, removed: false, layer: i })),
+  };
+  state.topRight = {
+    types: pileR,
+    tiles: pileR.map((ty, i) => ({ id: 2000 + i, type: ty, removed: false, layer: i })),
+  };
+  state.tray = [];
+  state.stash = [];
+  state.props = { remove: 2, undo: 2, shuffle: 2 };
+  // 道具梯度
+  if (n >= 6) state.props.remove++;
+  if (n >= 10) state.props.undo++;
+  if (n >= 16) state.props.shuffle++;
+  state.history = [];
+  state.won = false;
+  state.lost = false;
+
+  document.getElementById('curLevelNum').textContent = n;
+  document.getElementById('curLevelBig').innerHTML = n + '<span style="font-size:32px;letter-spacing:0;">关</span>';
+
+  render();
+}
+
+// 检测 3 同色消除；返回本回合被消除的类型数组 (供特效), 并从 tray 移除
+function tryMatchTray() {
+  // 统计每 type 数量
+  const counts = {};
+  state.tray.forEach((t, i) => {
+    counts[t.type] = counts[t.type] || [];
+    counts[t.type].push(i);
+  });
+  const removedTypes = [];
+  let changed = false;
+  for (const type in counts) {
+    const positions = counts[type];
+    if (positions.length >= 3) {
+      // 消除最早 3 个
+      const toRemove = new Set(positions.slice(0, 3));
+      state.tray = state.tray.filter((_, i) => !toRemove.has(i));
+      removedTypes.push(type);
+      changed = true;
+    }
+  }
+  return { changed, removedTypes };
+}
+
+// 找出当前 tray 中将被三消消除的所有 slot 索引（多组都算，倒序）
+function findMatchableIndices() {
+  const counts = {};
+  state.tray.forEach((t, i) => {
+    counts[t.type] = counts[t.type] || [];
+    counts[t.type].push(i);
+  });
+  const result = [];
+  for (const type in counts) {
+    if (counts[type].length >= 3) {
+      result.push(...counts[type].slice(0, 3));
+    }
+  }
+  return result.sort((a, b) => b - a);
+}
+
+// 三消预备动画 + 真正消除（带消除预备视觉，无 3 消时返回 false）
+function tryEliminateWithFx(trayEl, onDone) {
+  const matchable = findMatchableIndices();
+  if (matchable.length === 0) {
+    return false;
+  }
+  // 1) 给即将消除的 3 张槽位加 .eliminating 动画（黄闪+放大+缩散）
+  matchable.forEach(idx => {
+    const sel = '#tray .slot:nth-child(' + (idx + 1) + ')';
+    const slot = document.querySelector(sel);
+    if (slot) slot.classList.add('eliminating');
+  });
+  // 2) 260ms 后真正消除 + 特效 + 重渲染
+  setTimeout(() => {
+    let safety = 10, allR = [], m;
+    while ((m = tryMatchTray()).changed && safety-- > 0) allR = allR.concat(m.removedTypes);
+    if (allR.length > 0) playMatchFx(allR, trayEl);
+    const result = checkWinLose();
+    render();
+    if (onDone) onDone(result);
+  }, 260);
+  return true;
+}
+
+// 消除消散特效：在 tray 中心播放光圈 + 碎片飞散 + 分数飘字
+function playMatchFx(removedTypes, anchorEl) {
+  if (!removedTypes || removedTypes.length === 0) return;
+  AudioEngine.match();   // 消除音效
+  const fx = document.getElementById('fxLayer');
+  if (!fx) return;
+  let cx, cy;
+  if (anchorEl) {
+    const r = anchorEl.getBoundingClientRect();
+    cx = r.left + r.width / 2;
+    cy = r.top + r.height / 2;
+  } else {
+    cx = window.innerWidth / 2;
+    cy = window.innerHeight / 2;
+  }
+
+  // 光圈
+  const ring = document.createElement('div');
+  ring.className = 'fx-ring';
+  ring.style.left = cx + 'px';
+  ring.style.top = cy + 'px';
+  fx.appendChild(ring);
+
+  // 中心爆闪
+  const burst = document.createElement('div');
+  burst.className = 'fx-burst';
+  burst.style.left = cx + 'px';
+  burst.style.top = cy + 'px';
+  fx.appendChild(burst);
+
+  // 碎片：每个被消除类型生成若干图标碎片飞散
+  let shardCount = 0;
+  for (const type of removedTypes) {
+    const iconSvg = ICONS[ICON_KEYS[type % ICON_KEYS.length]];
+    const pieces = 6;
+    for (let i = 0; i < pieces; i++) {
+      const shard = document.createElement('div');
+      shard.className = 'fx-shard';
+      const angle = (Math.PI * 2 * i) / pieces + Math.random() * 0.4;
+      const dist = 60 + Math.random() * 50;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist - 20;
+      const rot = (Math.random() * 2 - 1) * 360;
+      shard.style.left = cx + 'px';
+      shard.style.top = cy + 'px';
+      shard.style.setProperty('--dx', dx + 'px');
+      shard.style.setProperty('--dy', dy + 'px');
+      shard.style.setProperty('--rot', rot + 'deg');
+      shard.style.width = '34px';
+      shard.style.height = '34px';
+      shard.innerHTML = iconSvg;
+      const svg = shard.querySelector('svg');
+      if (svg) { svg.setAttribute('width', '34'); svg.setAttribute('height', '34'); }
+      fx.appendChild(shard);
+      shardCount++;
+    }
+  }
+
+  // 分数飘字
+  const score = document.createElement('div');
+  score.className = 'fx-score';
+  score.style.left = cx + 'px';
+  score.style.top = cy + 'px';
+  score.textContent = '+' + (removedTypes.length * 10);
+  fx.appendChild(score);
+
+  // 清理
+  setTimeout(() => {
+    [ring, burst, score].forEach(el => el.remove());
+  }, 850);
+  setTimeout(() => {
+    fx.querySelectorAll('.fx-shard').forEach(el => {
+      if (el.parentNode) el.remove();
+    });
+  }, 700);
+}
+
+function checkWinLose() {
+  const allMain = state.tiles.every(t => t.removed);
+  const allTopL = !state.topLeft || state.topLeft.tiles.every(t => t.removed);
+  const allTopR = !state.topRight || state.topRight.tiles.every(t => t.removed);
+  if (allMain && allTopL && allTopR) {
+    state.won = true;
+    return 'win';
+  }
+  if (state.tray.length >= 7) {
+    state.lost = true;
+    return 'lose';
+  }
+  return null;
+}
+
+// 选 tile (含飞行动画)
+function pickTile(tile, tileEl) {
+  if (!isClickable(tile)) return;
+  if (state.won || state.lost) return;
+
+  AudioEngine.start();   // 用户明确点击 → 激活音频上下文
+  AudioEngine.click();   // 点击音效
+
+  // 计算飞行目标
+  const board = document.getElementById('board');
+  const tray = document.getElementById('tray');
+  const boardRect = board.getBoundingClientRect();
+  const trayRect = tray.getBoundingClientRect();
+  const tileRect = tileEl.getBoundingClientRect();
+  const slotW = trayRect.width / 7;
+  const targetX = trayRect.left + slotW * state.tray.length + slotW / 2;
+  const targetY = trayRect.top + trayRect.height / 2;
+  let dx = targetX - (tileRect.left + tileRect.width / 2);
+  let dy = targetY - (tileRect.top + tileRect.height / 2);
+  const ps = window.__pageScale || 1; dx /= ps; dy /= ps;  // 还原到元素本地坐标(祖先已缩放)
+
+  // 飞行: 先放大再缩到 0.55 飞向 tray, 让玩家清楚看到飞行轨迹
+  tileEl.style.zIndex = 9999;
+  tileEl.style.transition = 'transform 240ms cubic-bezier(0.5,0,0.5,1), opacity 220ms';
+  tileEl.style.transform = `translate(${dx}px, ${dy}px) scale(0.5)`;
+  tileEl.classList.add('flying');
+  tileEl.classList.remove('clickable');
+
+  // 280ms 后 transition 完全结束, 再 push 到 tray + render 销毁飞行元素
+  // (280ms > 240ms transition, 保证飞行轨迹完整可见, 不会被 render 中断)
+  setTimeout(() => {
+    // 移除 + 加入 tray（同步）
+    tile.removed = true;
+    state.tray.push({
+      id: tile.id,
+      type: tile.type,
+      srcId: tile.id,
+      srcCol: tile.col,
+      srcRow: tile.row,
+    });
+    // 记录历史
+    state.history.push({ action: 'pick', tileId: tile.id });
+
+    // 闪烁新进的 tray 槽位（视觉反馈：告诉玩家这格进了）
+    flashTraySlot(state.tray.length - 1);
+
+    // 三消（带预备动画：3 张先在槽里黄闪+放大再消散，绝不会出现"进了但没消"的错觉）
+    const trayEl = document.getElementById('tray');
+    const eliminated = tryEliminateWithFx(trayEl, (result) => {
+      if (result === 'win') {
+        setTimeout(() => showModal('恭喜过关！', `第 ${state.level} 关挑战成功`, () => {
+          hideModal();
+          markCleared(state.level);
+          if (state.level < 20) {
+            startLevel(state.level + 1);
+          } else {
+            showModal('通关达成！', '你已完成全部 20 关', () => {
+              hideModal();
+              startLevel(1);
+            });
+          }
+        }), 200);
+      } else if (result === 'lose') {
+        setTimeout(() => showModal('挑战失败', '消除区已满，再来一次？', () => {
+          hideModal();
+          startLevel(state.level);
+        }, 'gray', () => hideModal()), 200);
+      }
+    });
+
+    // 无 3 消：同步 render + 检查胜负
+    if (!eliminated) {
+      const result = checkWinLose();
+      render();
+      if (result === 'win') {
+        setTimeout(() => showModal('恭喜过关！', `第 ${state.level} 关挑战成功`, () => {
+          hideModal();
+          markCleared(state.level);
+          if (state.level < 20) {
+            startLevel(state.level + 1);
+          } else {
+            showModal('通关达成！', '你已完成全部 20 关', () => {
+              hideModal();
+              startLevel(1);
+            });
+          }
+        }), 200);
+      } else if (result === 'lose') {
+        setTimeout(() => showModal('挑战失败', '消除区已满，再来一次？', () => {
+          hideModal();
+          startLevel(state.level);
+        }, 'gray', () => hideModal()), 200);
+      }
+    }
+  }, 280);
+}
+
+// 闪烁 tray 槽位（高亮 → 渐隐），给玩家"这卡进了"明确反馈
+function flashTraySlot(idx) {
+  const slot = document.querySelector('#tray .slot:nth-child(' + (idx + 1) + ')');
+  if (!slot) return;
+  slot.classList.remove('flash');
+  void slot.offsetWidth;
+  slot.classList.add('flash');
+}
+
+// 撤回：把 tray 最后一格弹回原位
+function doUndo() {
+  if (state.props.undo <= 0) return;
+  if (state.tray.length === 0) return;
+  if (state.won || state.lost) return;
+  state.props.undo--;
+  const last = state.tray.pop();
+  // 区分主棋盘 tile 和 顶部堆叠 tile
+  const mainTile = state.tiles.find(t => t.id === last.id);
+  if (mainTile) {
+    mainTile.removed = false;
+  } else if (state.topLeft && state.topLeft.tiles.find(t => t.id === last.id)) {
+    state.topLeft.tiles.find(t => t.id === last.id).removed = false;
+  } else if (state.topRight && state.topRight.tiles.find(t => t.id === last.id)) {
+    state.topRight.tiles.find(t => t.id === last.id).removed = false;
+  }
+  render();
+}
+
+// 移出（stash）：tray 左侧 3 个移到 stash
+function doRemove() {
+  if (state.props.remove <= 0) return;
+  if (state.tray.length < 3) return;
+  if (state.won || state.lost) return;
+  state.props.remove--;
+  // 把前 3 个移到 stash
+  const moving = state.tray.splice(0, 3);
+  state.stash.push(...moving);
+  // 限制 stash 最多 3 个: 如果超, 把多的放回 tray 头部
+  if (state.stash.length > 3) {
+    const overflow = state.stash.splice(3);
+    state.tray.unshift(...overflow);
+  }
+  render();
+}
+
+// 从 stash 放回 tray 末尾
+function doReturnFromStash(idx) {
+  if (state.won || state.lost) return;
+  if (state.tray.length >= 7) return;
+  const item = state.stash.splice(idx, 1)[0];
+  if (!item) return;
+  state.tray.push(item);
+  // 3 消
+  const trayEl = document.getElementById('tray');
+  let safety = 10;
+  let allRemoved = [];
+  let m;
+  while ((m = tryMatchTray()).changed && safety-- > 0) {
+    allRemoved = allRemoved.concat(m.removedTypes);
+  }
+  if (allRemoved.length > 0) {
+    playMatchFx(allRemoved, trayEl);
+  }
+  // 检查
+  const result = checkWinLose();
+  render();
+  if (result === 'win') {
+    setTimeout(() => showModal('恭喜过关！', `第 ${state.level} 关挑战成功`, () => {
+      hideModal();
+      markCleared(state.level);
+      if (state.level < 20) startLevel(state.level + 1);
+      else { showModal('通关达成！', '你已完成全部 20 关', () => { hideModal(); startLevel(1); }); }
+    }), 200);
+  } else if (result === 'lose') {
+    setTimeout(() => showModal('挑战失败', '消除区已满，再来一次？', () => {
+      hideModal();
+      startLevel(state.level);
+    }, 'gray', () => hideModal()), 200);
+  }
+}
+
+// 重构：剩余 board 卡 + 顶部堆叠剩余卡 的 type 重新洗牌
+function doShuffle() {
+  if (state.props.shuffle <= 0) return;
+  if (state.won || state.lost) return;
+  state.props.shuffle--;
+  // 收集剩余 types (主棋盘 + 顶部堆叠)
+  const remaining = [];
+  for (const t of state.tiles) if (!t.removed) remaining.push(t.type);
+  if (state.topLeft) for (const t of state.topLeft.tiles) if (!t.removed) remaining.push(t.type);
+  if (state.topRight) for (const t of state.topRight.tiles) if (!t.removed) remaining.push(t.type);
+  // Fisher-Yates 洗牌
+  for (let i = remaining.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+  }
+  // 重新分配
+  let idx = 0;
+  for (const t of state.tiles) {
+    if (!t.removed) {
+      t.type = remaining[idx++];
+    }
+  }
+  if (state.topLeft) for (const t of state.topLeft.tiles) {
+    if (!t.removed) t.type = remaining[idx++];
+  }
+  if (state.topRight) for (const t of state.topRight.tiles) {
+    if (!t.removed) t.type = remaining[idx++];
+  }
+  render();
+}
+
+// ============================================================
+// 渲染
+// ============================================================
+function render() {
+  renderBoard();
+  renderTopPiles();
+  renderTray();
+  renderStash();
+  renderProps();
+  renderPreviewIfStart();
+  applyPageScale();
+}
+
+// 整页等比缩放: 让固定 540px 设计宽的内容按屏幕可用宽/高适配 (移动端核心)
+function applyPageScale() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  const gameVisible = document.getElementById('gamePage').style.display !== 'none';
+  const page = gameVisible ? document.getElementById('gamePage') : document.getElementById('levelStartPage');
+  const inner = page.querySelector('.page-inner');
+  if (!inner) return;
+  const availW = app.clientWidth;
+  // 临时还原缩放以测量自然高度
+  const prev = inner.style.transform;
+  inner.style.transform = 'none';
+  const designH = inner.getBoundingClientRect().height;
+  inner.style.transform = prev;
+  const sW = availW / 540;
+  const availH = window.innerHeight - 24;
+  const sH = designH > 0 ? availH / designH : 1;
+  const s = Math.min(sW, sH, 1);
+  inner.style.transform = 'scale(' + s + ')';
+  inner.style.transformOrigin = 'top center';
+  window.__pageScale = s;
+  page.style.height = (designH * s) + 'px';
+}
+
+// 渲染顶部左右堆叠 (每堆 3 张同 type, 错位堆叠)
+function renderTopPiles() {
+  if (!state.topLeft || !state.topRight) return;
+  renderSinglePile('topLeftPile', state.topLeft, 'left');
+  renderSinglePile('topRightPile', state.topRight, 'right');
+}
+function renderSinglePile(elId, pile, side) {
+  const wrap = document.getElementById(elId);
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  // 3 张从底到顶 (layer 0 = 底, 2 = 顶)
+  // 严格遮挡: 只有无任何上层未消除卡的最上层卡片可直接选
+  // 上方若有未消除卡片 → 下层被压 >20% → 不能直接选 (符合用户最新要求)
+  for (let i = 0; i < pile.tiles.length; i++) {
+    const t = pile.tiles[i];
+    const el = document.createElement('div');
+    el.className = 'top-pile-card' + (t.removed ? ' gone' : '');
+    el.dataset.type = t.type;
+    // 错位堆叠: layer 越大越靠上 + 偏左, 形成"金字塔"视觉, 3 张明显分开
+    el.style.left = (i * 10) + 'px';
+    el.style.top  = (-i * 12) + 'px';
+    // 关键: 顶堆 z-index 必须远大于棋盘卡 (棋盘 row 0 卡 z=1000+), 保证顶堆永远盖在棋盘之上不被遮挡
+    el.style.zIndex = 5000 + i;
+    if (!t.removed) {
+      el.innerHTML = ICONS[ICON_KEYS[t.type % ICON_KEYS.length]];
+      // 严格遮挡判定: 上方有任何未消除卡 → 不可选
+      if (isTopPileCardClickable(pile, t)) {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', () => pickTopPile(pile, t, el));
+      } else {
+        // 被上层压住 >20% → 视觉上变灰暗, 不可直接选
+        el.style.cursor = 'not-allowed';
+        el.style.filter = 'brightness(0.65)';
+      }
+    }
+    wrap.appendChild(el);
+  }
+}
+
+// 点击顶部堆叠的某一张 -> 该张飞入消除区 (tray), 与消除区同型卡凑三连消除
+function pickTopPile(pile, tile, el) {
+  if (state.won || state.lost) return;
+  if (tile.removed) return;
+  if (state.tray.length >= 7) return;
+  AudioEngine.start();
+  AudioEngine.click();   // 点击音效
+  // 飞入动画
+  const tray = document.getElementById('tray');
+  const trayRect = tray.getBoundingClientRect();
+  const slotW = trayRect.width / 7;
+  const targetX = trayRect.left + slotW * state.tray.length + slotW / 2;
+  const targetY = trayRect.top + trayRect.height / 2;
+  const tileRect = el.getBoundingClientRect();
+  let dx = targetX - (tileRect.left + tileRect.width / 2);
+  let dy = targetY - (tileRect.top + tileRect.height / 2);
+  const ps = window.__pageScale || 1; dx /= ps; dy /= ps;  // 还原到元素本地坐标(祖先已缩放)
+  // 飞入动画 (240ms transition + 280ms setTimeout, 保证飞行完整可见)
+  el.style.zIndex = 9999;
+  el.style.transition = 'transform 240ms cubic-bezier(0.5,0,0.5,1), opacity 220ms';
+  el.style.transform = `translate(${dx}px, ${dy}px) scale(0.5)`;
+  el.classList.add('flying');
+  setTimeout(() => {
+    tile.removed = true;
+    state.tray.push({
+      id: tile.id,
+      type: tile.type,
+      srcId: tile.id,
+      srcCol: -1,
+      srcRow: -1,
+    });
+    state.history.push({ action: 'pickTop', pile: pile, tileId: tile.id });
+    // 闪烁新进的 tray 槽位
+    flashTraySlot(state.tray.length - 1);
+    // 三消（带预备动画）
+    const trayEl = document.getElementById('tray');
+    const eliminated = tryEliminateWithFx(trayEl, (result) => {
+      if (result === 'win') {
+        setTimeout(() => showModal('恭喜过关！', `第 ${state.level} 关挑战成功`, () => {
+          hideModal();
+          markCleared(state.level);
+          if (state.level < 20) {
+            startLevel(state.level + 1);
+          } else {
+            showModal('通关达成！', '你已完成全部 20 关', () => {
+              hideModal();
+              startLevel(1);
+            });
+          }
+        }), 200);
+      } else if (result === 'lose') {
+        setTimeout(() => showModal('挑战失败', '消除区已满，再来一次？', () => {
+          hideModal();
+          startLevel(state.level);
+        }, 'gray', () => hideModal()), 200);
+      }
+    });
+    if (!eliminated) {
+      const result = checkWinLose();
+      render();
+      if (result === 'win') {
+        setTimeout(() => showModal('恭喜过关！', `第 ${state.level} 关挑战成功`, () => {
+          hideModal();
+          markCleared(state.level);
+          if (state.level < 20) {
+            startLevel(state.level + 1);
+          } else {
+            showModal('通关达成！', '你已完成全部 20 关', () => {
+              hideModal();
+              startLevel(1);
+            });
+          }
+        }), 200);
+      } else if (result === 'lose') {
+        setTimeout(() => showModal('挑战失败', '消除区已满，再来一次？', () => {
+          hideModal();
+          startLevel(state.level);
+        }, 'gray', () => hideModal()), 200);
+      }
+    }
+  }, 280);
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const W = state.W;
+  const TS = state.TS, RG = state.RG;
+  // 棋盘宽 = (W - 0.5) * TS (最右 col 整数 + TS/2 padding)
+  const totalW = (W - 0.5) * TS + 4;
+  const totalH = (state.cfg.rows.length + 1) * RG + 8;
+  board.style.width = totalW + 'px';
+  board.style.height = totalH + 'px';
+
+  // 按 zIndex 排序: row 越小 zIndex 越大 (在前), 同 row col 越大 zIndex 越大
+  const sorted = [...state.tiles].sort((a, b) => {
+    if (a.row !== b.row) return a.row - b.row;
+    return a.col - b.col;
+  });
+
+  for (const tile of sorted) {
+    if (tile.removed) continue;
+    const el = document.createElement('div');
+    el.className = 'tile';
+    el.dataset.id = tile.id;
+    const clickable = isClickable(tile);
+    if (!clickable) el.classList.add('blocked');
+    el.style.width = TS + 'px';
+    el.style.height = TS + 'px';
+    el.style.left = (colToX(tile.col, W) - TS/2) + 'px';
+    el.style.top = (rowToY(tile.row) - TS/2) + 'px';
+    el.style.zIndex = 1000 - tile.row * 10 + Math.floor(tile.col);
+    el.innerHTML = ICONS[ICON_KEYS[tile.type % ICON_KEYS.length]];
+    const svg = el.querySelector('svg');
+    if (svg) { svg.setAttribute('width', Math.floor(TS * 0.78)); svg.setAttribute('height', Math.floor(TS * 0.78)); }
+    el.addEventListener('click', () => {
+      if (el.classList.contains('flying')) return;
+      pickTile(tile, el);
+    });
+    board.appendChild(el);
+  }
+}
+
+function renderTray() {
+  const tray = document.getElementById('tray');
+  tray.innerHTML = '';
+  const TS = state.TS;
+  for (let i = 0; i < 7; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.style.width = TS + 'px';
+    slot.style.height = TS + 'px';
+    if (state.tray[i]) {
+      slot.classList.add('filled');
+      slot.innerHTML = ICONS[ICON_KEYS[state.tray[i].type % ICON_KEYS.length]];
+      const svg = slot.querySelector('svg');
+      if (svg) { svg.setAttribute('width', Math.floor(TS * 0.78)); svg.setAttribute('height', Math.floor(TS * 0.78)); }
+    }
+    tray.appendChild(slot);
+  }
+}
+
+function renderStash() {
+  const stash = document.getElementById('stash');
+  stash.innerHTML = '';
+  const TS = state.TS;
+  for (let i = 0; i < 3; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.style.width = TS + 'px';
+    slot.style.height = TS + 'px';
+    if (state.stash[i]) {
+      slot.classList.add('filled', 'stash-slot');
+      slot.innerHTML = ICONS[ICON_KEYS[state.stash[i].type % ICON_KEYS.length]];
+      const svg = slot.querySelector('svg');
+      if (svg) { svg.setAttribute('width', Math.floor(TS * 0.78)); svg.setAttribute('height', Math.floor(TS * 0.78)); }
+      slot.addEventListener('click', () => doReturnFromStash(i));
+    }
+    stash.appendChild(slot);
+  }
+}
+
+function renderProps() {
+  const props = document.getElementById('props');
+  props.innerHTML = '';
+  // 移除 (stashing)
+  const btn1 = document.createElement('button');
+  btn1.className = 'prop-btn';
+  btn1.disabled = state.props.remove <= 0;
+  btn1.innerHTML = PROP_ICONS.remove + `<span class="badge">x${state.props.remove}</span>`;
+  btn1.addEventListener('click', doRemove);
+  props.appendChild(btn1);
+  // 撤回
+  const btn2 = document.createElement('button');
+  btn2.className = 'prop-btn';
+  btn2.disabled = state.props.undo <= 0;
+  btn2.innerHTML = PROP_ICONS.undo + `<span class="badge">x${state.props.undo}</span>`;
+  btn2.addEventListener('click', doUndo);
+  props.appendChild(btn2);
+  // 重构
+  const btn3 = document.createElement('button');
+  btn3.className = 'prop-btn';
+  btn3.disabled = state.props.shuffle <= 0;
+  btn3.innerHTML = PROP_ICONS.shuffle + `<span class="badge">x${state.props.shuffle}</span>`;
+  btn3.addEventListener('click', doShuffle);
+  props.appendChild(btn3);
+}
+
+function renderPreviewIfStart() {
+  const start = document.getElementById('levelStartPage');
+  if (start.classList.contains('hidden')) return;
+  const preview = document.getElementById('startPreview');
+  preview.innerHTML = '';
+  // 顶部左右堆叠提示 (每堆 3 张不同图标)
+  if (state.topLeft) {
+    const leftMini = document.createElement('div');
+    leftMini.className = 'preview-mini left';
+    leftMini.innerHTML = state.topLeft.tiles.map(t => ICONS[ICON_KEYS[t.type % ICON_KEYS.length]]).join('');
+    preview.appendChild(leftMini);
+  }
+  if (state.topRight) {
+    const rightMini = document.createElement('div');
+    rightMini.className = 'preview-mini right';
+    rightMini.innerHTML = state.topRight.tiles.map(t => ICONS[ICON_KEYS[t.type % ICON_KEYS.length]]).join('');
+    preview.appendChild(rightMini);
+  }
+  // 简化预览: 缩小显示
+  const scale = Math.min(0.6, 280 / ((state.W - 0.5) * state.TS));
+  const W = state.W;
+  const TS = state.TS, RG = state.RG;
+  const totalW = ((W - 0.5) * TS + 4) * scale;
+  const totalH = (state.cfg.rows.length + 1) * RG * scale + 8;
+  preview.style.width = totalW + 'px';
+  preview.style.height = totalH + 'px';
+  const sorted = [...state.tiles].sort((a, b) => {
+    if (a.row !== b.row) return a.row - b.row;
+    return a.col - b.col;
+  });
+  for (const tile of sorted) {
+    const el = document.createElement('div');
+    el.className = 'tile';
+    const ts = TS * scale;
+    el.style.width = ts + 'px';
+    el.style.height = ts + 'px';
+    el.style.left = (colToX(tile.col, W) * scale - ts/2) + 'px';
+    el.style.top = (rowToY(tile.row) * scale - ts/2) + 'px';
+    el.style.zIndex = 1000 - tile.row * 10 + Math.floor(tile.col);
+    el.innerHTML = ICONS[ICON_KEYS[tile.type % ICON_KEYS.length]];
+    const svg = el.querySelector('svg');
+    if (svg) { svg.setAttribute('width', Math.floor(ts * 0.78)); svg.setAttribute('height', Math.floor(ts * 0.78)); }
+    el.style.cursor = 'default';
+    el.style.boxShadow = '0 2px 0 rgba(20,40,90,0.35), 0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -2px 0 rgba(120,150,200,0.35)';
+    preview.appendChild(el);
+  }
+  // 道具
+  const sp = document.getElementById('startProps');
+  sp.innerHTML = '';
+  const pb1 = document.createElement('button');
+  pb1.className = 'prop-btn';
+  pb1.disabled = true;
+  pb1.innerHTML = PROP_ICONS.remove + `<span class="badge">x${state.props.remove}</span>`;
+  sp.appendChild(pb1);
+  const pb2 = document.createElement('button');
+  pb2.className = 'prop-btn';
+  pb2.disabled = true;
+  pb2.innerHTML = PROP_ICONS.undo + `<span class="badge">x${state.props.undo}</span>`;
+  sp.appendChild(pb2);
+  const pb3 = document.createElement('button');
+  pb3.className = 'prop-btn';
+  pb3.disabled = true;
+  pb3.innerHTML = PROP_ICONS.shuffle + `<span class="badge">x${state.props.shuffle}</span>`;
+  sp.appendChild(pb3);
+}
+
+// 渲染关卡选择网格
+function renderLevelGrid() {
+  const grid = document.getElementById('levelGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const unlocked = loadUnlocked();
+  const cur = state.level;
+  for (let n = 1; n <= MAX_LEVEL; n++) {
+    const cell = document.createElement('div');
+    cell.className = 'lv-cell';
+    const cleared = n < unlocked;                  // 已通关 (解锁但非当前)
+    const isCurrent = n === cur;
+    const locked = n > unlocked;                   // 未解锁
+    if (cleared) cell.classList.add('cleared');
+    if (isCurrent) cell.classList.add('current');
+    if (locked) cell.classList.add('locked');
+    cell.innerHTML = `<span>${n}</span>`;
+    if (!locked) {
+      cell.addEventListener('click', () => {
+        state.level = n;
+        startLevel(n);
+      });
+    }
+    grid.appendChild(cell);
+  }
+}
+const PROP_ICONS = {
+  remove: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#ffd96a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 24 L52 24 M16 24 L12 38 Q12 44 18 44 L46 44 Q52 44 52 38 L48 24"/>
+      <path d="M24 16 L24 8 L40 8 L40 16"/>
+      <path d="M20 18 Q26 14 32 18 Q38 14 44 18" stroke="#ff8a3a" stroke-width="2"/>
+    </g>
+    <path d="M24 32 L40 32 M24 40 L40 40" stroke="#fff" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>
+  </svg>`,
+  undo: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#ffd96a" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 32 Q12 14 32 14 Q48 14 54 26"/>
+      <path d="M46 18 L54 26 L46 32"/>
+    </g>
+    <path d="M22 22 Q24 18 28 18" stroke="#ffd96a" stroke-width="2" fill="none" opacity="0.5"/>
+  </svg>`,
+  shuffle: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#ffd96a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 20 Q24 20 32 32 Q40 44 56 44"/>
+      <path d="M8 44 Q24 44 32 32 Q40 20 56 20"/>
+      <path d="M48 14 L56 20 L48 26"/>
+      <path d="M48 38 L56 44 L48 50"/>
+    </g>
+  </svg>`,
+};
+
+// ============================================================
+// 关卡开始页 / 弹窗
+// ============================================================
+function startLevel(n) {
+  initLevel(n);
+  document.getElementById('levelStartPage').classList.remove('hidden');
+  document.getElementById('gamePage').style.display = 'none';
+  document.getElementById('startLevelNum').textContent = n;
+  renderPreviewIfStart();
+  renderLevelGrid();
+}
+
+function beginGame() {
+  document.getElementById('levelStartPage').classList.add('hidden');
+  document.getElementById('gamePage').style.display = '';
+  render();
+}
+
+function showModal(title, text, onPrimary, primaryLabel, onSecondary, secondaryLabel) {
+  // 胜负音效
+  if (title === '恭喜过关！' || title === '通关达成！') AudioEngine.win();
+  else if (title === '挑战失败') AudioEngine.lose();
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalText').textContent = text;
+  const m = document.getElementById('modal');
+  const p = document.getElementById('modalPrimary');
+  const s = document.getElementById('modalSecondary');
+  p.textContent = primaryLabel || '确定';
+  s.textContent = secondaryLabel || '取消';
+  p.onclick = () => { onPrimary && onPrimary(); };
+  s.onclick = () => { onSecondary && onSecondary(); };
+  s.style.display = onSecondary ? '' : 'none';
+  m.classList.add('show');
+}
+function hideModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+// ============================================================
+// 启动
+// ============================================================
+document.getElementById('startBtn').addEventListener('click', () => {
+  // 关键：开始挑战按钮是用户最强的交互信号, 立即启动音频 (满足浏览器自动播放策略)
+  AudioEngine.start();
+  beginGame();
+});
+document.getElementById('homeBtn').addEventListener('click', () => {
+  AudioEngine.start();
+  // 返回首页选关：仅切换页面，不重置当前关卡进度
+  document.getElementById('levelStartPage').classList.remove('hidden');
+  document.getElementById('gamePage').style.display = 'none';
+  // 用当前关卡的预览刷新首页（不重新 init）
+  document.getElementById('startLevelNum').textContent = state.level;
+  renderLevelGrid();
+  applyPageScale();
+});
+document.getElementById('resetProgressBtn').addEventListener('click', () => {
+  AudioEngine.start();
+  showModal('重置进度？', '将清空所有已解锁关卡，回到第 1 关', () => {
+    hideModal();
+    resetProgress();
+    state.level = 1;
+    startLevel(1);
+  }, '确定', () => hideModal(), '取消');
+});
+startLevel(1);
+
+// ============================================================
+// 音频：绑定静音按钮 + 首次交互启动
+// ============================================================
+(function initAudio() {
+  const bgmBtn = document.getElementById('bgmBtn');
+  const sfxBtn = document.getElementById('sfxBtn');
+  if (bgmBtn) AudioEngine.bindBgmBtn(bgmBtn);
+  if (sfxBtn) AudioEngine.bindSfxBtn(sfxBtn);
+  // 首次任意触摸/点击/键盘交互后启动音频 (满足浏览器自动播放策略)
+  const kick = () => {
+    AudioEngine.start();
+    window.removeEventListener('touchstart', kick);
+    window.removeEventListener('pointerdown', kick);
+    window.removeEventListener('keydown', kick);
+  };
+  window.addEventListener('touchstart', kick, { once: false, passive: true });
+  window.addEventListener('pointerdown', kick, { once: false, passive: true });
+  window.addEventListener('keydown', kick, { once: false });
+})();
+
+// 移动端: 屏幕旋转/尺寸变化/微信地址栏伸缩时重新缩放
+window.addEventListener('resize', applyPageScale);
+window.addEventListener('orientationchange', () => setTimeout(applyPageScale, 200));
+applyPageScale();
+
+// 调试：把关键状态暴露到 window 方便测试
+window._state = state;
+window._icons = ICONS;
+window._levelConfig = levelConfig;
+window.AudioEngine = AudioEngine;
+</script>
+</body>
+</html>
